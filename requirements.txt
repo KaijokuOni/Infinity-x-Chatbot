@@ -1,0 +1,18 @@
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+python-multipart>=0.0.9
+httpx>=0.27.0
+edge-tts>=6.1.9
+openai>=1.40.0
+anthropic>=0.34.0
+google-genai>=2.0.0
+python-dotenv>=1.0.0
+aiofiles>=23.2.1
+pydantic>=2.8.0
+pydantic-settings>=2.4.0
+
+# Local STT - Apple Silicon (recommended for Mac)
+# mlx-whisper>=0.4.0  # uncomment for local Apple Silicon Whisper
+
+# Optional: Groq for free fast Whisper API
+# groq>=0.11.0

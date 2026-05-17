@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OmniCare — ভীণা | Bangla Medical Assistant</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0a0f1e;
+      --surface: #111827;
+      --card: #1a2235;
+      --border: #2a3450;
+      --accent: #4f8ef7;
+      --accent2: #7c3aed;
+      --success: #10b981;
+      --danger: #ef4444;
+      --text: #e2e8f0;
+      --muted: #64748b;
+      --radius: 14px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Noto Sans Bengali', 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .logo { font-size: 22px; font-weight: 700; color: var(--accent); }
+    .logo span { color: var(--text); }
+    .status-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: var(--muted); transition: background 0.3s;
+    }
+    .status-dot.online { background: var(--success); }
+    .status-dot.recording { background: var(--danger); animation: pulse 1s infinite; }
+
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+    main {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      gap: 0;
+      max-width: 1200px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    @media (max-width: 768px) {
+      main { grid-template-columns: 1fr; }
+      .sidebar { order: -1; }
+    }
+
+    .chat-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      padding-right: 24px;
+    }
+
+    .avatar-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      padding: 24px;
+      background: var(--card);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+    }
+
+    .avatar-ring {
+      width: 120px; height: 120px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 52px;
+      box-shadow: 0 0 0 0 rgba(79,142,247,0.4);
+      transition: box-shadow 0.3s;
+    }
+
+    .avatar-ring.speaking {
+      animation: speakPulse 1.2s ease-in-out infinite;
+    }
+
+    @keyframes speakPulse {
+      0% { box-shadow: 0 0 0 0 rgba(79,142,247,0.6); }
+      70% { box-shadow: 0 0 0 20px rgba(79,142,247,0); }
+      100% { box-shadow: 0 0 0 0 rgba(79,142,247,0); }
+    }
+
+    .avatar-name { font-size: 20px; font-weight: 600; }
+    .avatar-subtitle { font-size: 13px; color: var(--muted); }
+    .stage-badge {
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      background: rgba(79,142,247,0.15);
+      color: var(--accent);
+      border: 1px solid rgba(79,142,247,0.3);
+    }
+
+    .chat-messages {
+      flex: 1;
+      min-height: 300px;
+      max-height: 400px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding: 16px;
+      background: var(--card);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+    }
+
+    .msg {
+      display: flex;
+      gap: 10px;
+      max-width: 85%;
+    }
+    .msg.user { align-self: flex-end; flex-direction: row-reverse; }
+    .msg-bubble {
+      padding: 10px 14px;
+      border-radius: 12px;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    .msg.assistant .msg-bubble {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-bottom-left-radius: 4px;
+    }
+    .msg.user .msg-bubble {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: white;
+      border-bottom-right-radius: 4px;
+    }
+    .msg-label { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+
+    .thinking {
+      display: flex; gap: 4px; padding: 12px;
+      align-items: center;
+    }
+    .thinking span {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--accent);
+      animation: bounce 1.2s infinite;
+    }
+    .thinking span:nth-child(2) { animation-delay: 0.2s; }
+    .thinking span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes bounce { 0%,80%,100%{transform:translateY(0)} 40%{transform:translateY(-8px)} }
+
+    .controls {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .text-input-wrap {
+      flex: 1;
+      display: flex;
+      gap: 8px;
+    }
+
+    #textInput {
+      flex: 1;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      padding: 10px 14px;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    #textInput:focus { border-color: var(--accent); }
+    #textInput::placeholder { color: var(--muted); }
+
+    button {
+      border: none; cursor: pointer; border-radius: 10px;
+      font-size: 14px; font-weight: 600; transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: white;
+      padding: 10px 18px;
+    }
+    .btn-primary:hover { background: #3b7de8; }
+
+    .btn-record {
+      width: 52px; height: 52px;
+      border-radius: 50%;
+      background: var(--card);
+      border: 2px solid var(--border);
+      color: var(--text);
+      font-size: 22px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .btn-record.recording {
+      background: var(--danger);
+      border-color: var(--danger);
+      color: white;
+      animation: pulse 1s infinite;
+    }
+    .btn-record:hover:not(.recording) { border-color: var(--accent); }
+
+    .sidebar {
+      padding-left: 24px;
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px;
+    }
+
+    .card h3 {
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin-bottom: 14px;
+    }
+
+    .summary-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .summary-row {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .summary-label {
+      font-size: 11px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .summary-value {
+      font-size: 14px;
+      color: var(--text);
+    }
+
+    .category-chip {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      background: rgba(124,58,237,0.2);
+      color: #a78bfa;
+      border: 1px solid rgba(124,58,237,0.3);
+    }
+
+    .config-row {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-bottom: 10px;
+    }
+
+    .config-row label { font-size: 12px; color: var(--muted); }
+
+    select {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: 13px;
+      width: 100%;
+      outline: none;
+    }
+    select:focus { border-color: var(--accent); }
+
+    .btn-danger {
+      background: rgba(239,68,68,0.15);
+      color: var(--danger);
+      border: 1px solid rgba(239,68,68,0.3);
+      padding: 8px 14px;
+      width: 100%;
+    }
+    .btn-danger:hover { background: rgba(239,68,68,0.25); }
+
+    .btn-success {
+      background: rgba(16,185,129,0.15);
+      color: var(--success);
+      border: 1px solid rgba(16,185,129,0.3);
+      padding: 8px 14px;
+      width: 100%;
+      margin-top: 6px;
+    }
+    .btn-success:hover { background: rgba(16,185,129,0.25); }
+
+    .volume-bar {
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-top: 8px;
+    }
+    .volume-fill {
+      height: 100%;
+      background: var(--accent);
+      width: 0%;
+      transition: width 0.1s;
+    }
+
+    #toast {
+      position: fixed; bottom: 24px; right: 24px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 18px;
+      font-size: 14px;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: all 0.3s;
+      pointer-events: none;
+      z-index: 999;
+    }
+    #toast.show { opacity: 1; transform: translateY(0); }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">OmniCare <span>| ভীণা</span></div>
+  <div class="status-dot" id="statusDot"></div>
+  <span style="font-size:13px;color:var(--muted)" id="statusText">সংযোগ করা হচ্ছে...</span>
+</header>
+
+<main>
+  <!-- Chat Panel -->
+  <div class="chat-panel">
+
+    <div class="avatar-wrap">
+      <div class="avatar-ring" id="avatarRing">🏥</div>
+      <div class="avatar-name">ভীণা</div>
+      <div class="avatar-subtitle">OmniCare স্বাস্থ্য সহকারী</div>
+      <div class="stage-badge" id="stageBadge">প্রস্তুত</div>
+    </div>
+
+    <div class="chat-messages" id="chatMessages">
+      <div class="msg assistant">
+        <div>
+          <div class="msg-label">ভীণা</div>
+          <div class="msg-bubble">শুরু করতে "নতুন সেশন শুরু করুন" বোতামে ক্লিক করুন।</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="volume-bar"><div class="volume-fill" id="volumeFill"></div></div>
+
+    <div class="controls">
+      <button class="btn-record" id="recordBtn" title="ভয়েস রেকর্ড করুন" disabled>🎤</button>
+      <div class="text-input-wrap">
+        <input type="text" id="textInput" placeholder="বাংলায় লিখুন অথবা মাইক্রোফোন ব্যবহার করুন..." disabled />
+        <button class="btn-primary" id="sendBtn" disabled>পাঠান</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Sidebar -->
+  <div class="sidebar">
+
+    <div class="card">
+      <h3>সেশন</h3>
+      <button class="btn-success" id="startBtn">▶ নতুন সেশন শুরু করুন</button>
+      <button class="btn-danger" id="newSessionBtn" style="margin-top:6px;display:none">↺ নতুন রোগী</button>
+      <button class="btn-primary" style="width:100%;margin-top:6px;display:none" id="summaryBtn">📋 ডাক্তারি সারসংক্ষেপ</button>
+    </div>
+
+    <div class="card" id="summaryCard" style="display:none">
+      <h3>রোগী সারসংক্ষেপ</h3>
+      <div class="summary-grid" id="summaryGrid"></div>
+    </div>
+
+    <div class="card">
+      <h3>কনফিগ</h3>
+      <div class="config-row">
+        <label>LLM প্রদানকারী</label>
+        <select id="llmSelect">
+          <option value="ollama">Ollama (লোকাল)</option>
+          <option value="openai">OpenAI GPT</option>
+          <option value="anthropic">Anthropic Claude</option>
+          <option value="gemini">Google Gemini</option>
+        </select>
+      </div>
+      <div class="config-row" id="modelRow">
+        <label>Ollama মডেল</label>
+        <select id="modelSelect">
+          <option value="aya-expanse:8b">aya-expanse:8b ✓</option>
+          <option value="qwen2.5:14b">qwen2.5:14b</option>
+          <option value="qwen2.5-coder:1.5b">qwen2.5-coder:1.5b</option>
+        </select>
+      </div>
+      <div class="config-row">
+        <label>STT প্রদানকারী</label>
+        <select id="sttSelect">
+          <option value="openai">OpenAI Whisper</option>
+          <option value="groq">Groq Whisper (বিনামূল্যে)</option>
+          <option value="mlx">MLX Whisper (লোকাল)</option>
+          <option value="gemini">Gemini (সেরা বাংলা)</option>
+        </select>
+      </div>
+      <button class="btn-primary" style="width:100%;margin-top:6px" id="saveConfigBtn">কনফিগ সংরক্ষণ</button>
+    </div>
+
+  </div>
+</main>
+
+<div id="toast"></div>
+
+<audio id="responseAudio" style="display:none"></audio>
+
+<script>
+  const API = '';  // relative URLs
+  let sessionId = null;
+  let mediaRecorder = null;
+  let audioChunks = [];
+  let isRecording = false;
+  let analyser = null;
+  let animFrame = null;
+
+  const chatMessages = document.getElementById('chatMessages');
+  const recordBtn = document.getElementById('recordBtn');
+  const sendBtn = document.getElementById('sendBtn');
+  const textInput = document.getElementById('textInput');
+  const avatarRing = document.getElementById('avatarRing');
+  const stageBadge = document.getElementById('stageBadge');
+  const statusDot = document.getElementById('statusDot');
+  const statusText = document.getElementById('statusText');
+  const responseAudio = document.getElementById('responseAudio');
+  const summaryCard = document.getElementById('summaryCard');
+  const summaryGrid = document.getElementById('summaryGrid');
+  const summaryBtn = document.getElementById('summaryBtn');
+  const newSessionBtn = document.getElementById('newSessionBtn');
+  const startBtn = document.getElementById('startBtn');
+  const volumeFill = document.getElementById('volumeFill');
+
+  const stageLabels = {
+    intro: 'সূচনা',
+    followup: 'ফলো-আপ প্রশ্ন',
+    complete: 'সম্পন্ন',
+  };
+
+  // ── Health check ──────────────────────────────────────────────────────────
+  async function checkHealth() {
+    try {
+      const r = await fetch('/api/health');
+      const d = await r.json();
+      statusDot.className = 'status-dot online';
+      statusText.textContent = `${d.llm_provider} | ${d.stt_provider} | ${d.tts_provider}`;
+      loadConfig();
+    } catch {
+      statusText.textContent = 'সার্ভার সংযোগ নেই';
+    }
+  }
+
+  async function loadConfig() {
+    try {
+      const r = await fetch('/api/config');
+      const d = await r.json();
+      document.getElementById('llmSelect').value = d.llm_provider;
+      document.getElementById('modelSelect').value = d.ollama_model;
+      document.getElementById('sttSelect').value = d.stt_provider;
+    } catch {}
+  }
+
+  document.getElementById('saveConfigBtn').addEventListener('click', async () => {
+    const body = {
+      llm_provider: document.getElementById('llmSelect').value,
+      ollama_model: document.getElementById('modelSelect').value,
+      stt_provider: document.getElementById('sttSelect').value,
+    };
+    try {
+      await fetch('/api/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      toast('কনফিগ আপডেট হয়েছে');
+    } catch { toast('কনফিগ আপডেট ব্যর্থ', true); }
+  });
+
+  document.getElementById('llmSelect').addEventListener('change', (e) => {
+    document.getElementById('modelRow').style.display = e.target.value === 'ollama' ? '' : 'none';
+  });
+
+  // ── Session ───────────────────────────────────────────────────────────────
+  startBtn.addEventListener('click', startSession);
+
+  async function startSession() {
+    startBtn.disabled = true;
+    try {
+      const r = await fetch('/api/session/start', { method: 'POST' });
+      const d = await r.json();
+      sessionId = d.session_id;
+
+      chatMessages.innerHTML = '';
+      summaryCard.style.display = 'none';
+      summaryBtn.style.display = 'none';
+      newSessionBtn.style.display = '';
+      startBtn.style.display = 'none';
+
+      addMessage('assistant', d.message);
+      updateStage(d.stage);
+
+      enableControls(true);
+      playAudio(d.audio_url);
+    } catch (e) {
+      toast('সেশন শুরু করতে সমস্যা হয়েছে: ' + e.message, true);
+      startBtn.disabled = false;
+    }
+  }
+
+  newSessionBtn.addEventListener('click', async () => {
+    if (sessionId) {
+      await fetch(`/api/session/${sessionId}`, { method: 'DELETE' });
+    }
+    sessionId = null;
+    chatMessages.innerHTML = '';
+    summaryCard.style.display = 'none';
+    enableControls(false);
+    newSessionBtn.style.display = 'none';
+    summaryBtn.style.display = 'none';
+    startBtn.style.display = '';
+    startBtn.disabled = false;
+    stageBadge.textContent = 'প্রস্তুত';
+    addMessage('assistant', 'শুরু করতে "নতুন সেশন শুরু করুন" বোতামে ক্লিক করুন।');
+  });
+
+  // ── Text input ────────────────────────────────────────────────────────────
+  sendBtn.addEventListener('click', () => sendText());
+  textInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendText(); });
+
+  async function sendText() {
+    const text = textInput.value.trim();
+    if (!text || !sessionId) return;
+    textInput.value = '';
+    await processUserInput({ text });
+  }
+
+  // ── Voice recording ───────────────────────────────────────────────────────
+  recordBtn.addEventListener('click', () => {
+    if (isRecording) stopRecording();
+    else startRecording();
+  });
+
+  async function startRecording() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+      // volume analyser
+      const ctx = new AudioContext();
+      const src = ctx.createMediaStreamSource(stream);
+      analyser = ctx.createAnalyser();
+      analyser.fftSize = 256;
+      src.connect(analyser);
+      drawVolume();
+
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+        ? 'audio/webm;codecs=opus'
+        : 'audio/ogg;codecs=opus';
+
+      mediaRecorder = new MediaRecorder(stream, { mimeType });
+      audioChunks = [];
+
+      mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunks.push(e.data); };
+      mediaRecorder.onstop = async () => {
+        cancelAnimationFrame(animFrame);
+        volumeFill.style.width = '0%';
+        const blob = new Blob(audioChunks, { type: mimeType });
+        await processUserInput({ audioBlob: blob, mimeType });
+        stream.getTracks().forEach(t => t.stop());
+      };
+
+      mediaRecorder.start(100);
+      isRecording = true;
+      recordBtn.classList.add('recording');
+      recordBtn.textContent = '⏹';
+      statusDot.className = 'status-dot recording';
+    } catch (e) {
+      toast('মাইক্রোফোন অ্যাক্সেস পাওয়া যায়নি', true);
+    }
+  }
+
+  function stopRecording() {
+    if (mediaRecorder && isRecording) {
+      mediaRecorder.stop();
+      isRecording = false;
+      recordBtn.classList.remove('recording');
+      recordBtn.textContent = '🎤';
+      statusDot.className = 'status-dot online';
+    }
+  }
+
+  function drawVolume() {
+    const data = new Uint8Array(analyser.frequencyBinCount);
+    analyser.getByteFrequencyData(data);
+    const avg = data.reduce((a, b) => a + b, 0) / data.length;
+    volumeFill.style.width = Math.min(100, avg * 2) + '%';
+    animFrame = requestAnimationFrame(drawVolume);
+  }
+
+  // ── Process input (voice or text) ─────────────────────────────────────────
+  async function processUserInput({ text, audioBlob, mimeType }) {
+    if (!sessionId) return;
+    enableControls(false);
+
+    let transcription = text;
+
+    if (audioBlob) {
+      // Show "processing" state while transcribing
+      const loadingId = addMessage('assistant', null, true);
+      try {
+        const form = new FormData();
+        form.append('audio', audioBlob, `audio.webm`);
+        const r = await fetch(`/api/voice/process?session_id=${sessionId}`, {
+          method: 'POST', body: form,
+        });
+        if (!r.ok) throw new Error(await r.text());
+        const d = await r.json();
+        removeMessage(loadingId);
+        addMessage('user', d.transcription);
+        addMessage('assistant', d.response);
+        updateStage(d.stage);
+        playAudio(d.audio_url);
+        if (d.has_summary) {
+          summaryBtn.style.display = '';
+        }
+      } catch (e) {
+        removeMessage(loadingId);
+        toast('ত্রুটি: ' + e.message, true);
+      }
+    } else {
+      addMessage('user', text);
+      const loadingId = addMessage('assistant', null, true);
+      try {
+        const r = await fetch('/api/text/process', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ session_id: sessionId, text }),
+        });
+        if (!r.ok) throw new Error(await r.text());
+        const d = await r.json();
+        removeMessage(loadingId);
+        addMessage('assistant', d.response);
+        updateStage(d.stage);
+        playAudio(d.audio_url);
+        if (d.has_summary) {
+          summaryBtn.style.display = '';
+        }
+      } catch (e) {
+        removeMessage(loadingId);
+        toast('ত্রুটি: ' + e.message, true);
+      }
+    }
+
+    enableControls(true);
+  }
+
+  // ── Summary ───────────────────────────────────────────────────────────────
+  summaryBtn.addEventListener('click', async () => {
+    if (!sessionId) return;
+    try {
+      const r = await fetch(`/api/session/${sessionId}/summary`);
+      const d = await r.json();
+      renderSummary(d);
+    } catch (e) {
+      toast('সারসংক্ষেপ লোড করা যায়নি', true);
+    }
+  });
+
+  function renderSummary(data) {
+    const labels = {
+      category: 'বিভাগ',
+      chief_complaint: 'প্রধান সমস্যা',
+      duration: 'সময়কাল',
+      severity: 'তীব্রতা',
+      symptoms: 'লক্ষণসমূহ',
+      history: 'পূর্ববর্তী ইতিহাস',
+      doctor_note: 'ডাক্তারের নোট',
+    };
+
+    summaryGrid.innerHTML = '';
+    for (const [key, label] of Object.entries(labels)) {
+      if (!data[key]) continue;
+      const row = document.createElement('div');
+      row.className = 'summary-row';
+      let val = data[key];
+      if (key === 'category') {
+        val = `<span class="category-chip">${val}</span>`;
+      }
+      row.innerHTML = `<div class="summary-label">${label}</div><div class="summary-value">${val}</div>`;
+      summaryGrid.appendChild(row);
+    }
+
+    summaryCard.style.display = '';
+  }
+
+  // ── Audio playback ────────────────────────────────────────────────────────
+  function playAudio(url) {
+    avatarRing.classList.add('speaking');
+    responseAudio.src = url + '?t=' + Date.now();
+    responseAudio.play().catch(() => {});
+    responseAudio.onended = () => avatarRing.classList.remove('speaking');
+  }
+
+  // ── UI helpers ────────────────────────────────────────────────────────────
+  let msgIdCounter = 0;
+  function addMessage(role, content, loading = false) {
+    const id = 'msg-' + (++msgIdCounter);
+    const div = document.createElement('div');
+    div.className = `msg ${role}`;
+    div.id = id;
+    if (loading) {
+      div.innerHTML = `<div><div class="msg-label">${role === 'assistant' ? 'ভীণা' : 'আপনি'}</div><div class="msg-bubble thinking"><span></span><span></span><span></span></div></div>`;
+    } else {
+      div.innerHTML = `<div><div class="msg-label">${role === 'assistant' ? 'ভীণা' : 'আপনি'}</div><div class="msg-bubble">${content}</div></div>`;
+    }
+    chatMessages.appendChild(div);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+    return id;
+  }
+
+  function removeMessage(id) {
+    const el = document.getElementById(id);
+    if (el) el.remove();
+  }
+
+  function updateStage(stage) {
+    stageBadge.textContent = stageLabels[stage] || stage;
+  }
+
+  function enableControls(enabled) {
+    recordBtn.disabled = !enabled;
+    textInput.disabled = !enabled;
+    sendBtn.disabled = !enabled;
+  }
+
+  function toast(msg, error = false) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.style.borderColor = error ? 'var(--danger)' : 'var(--success)';
+    el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), 3000);
+  }
+
+  // ── Init ──────────────────────────────────────────────────────────────────
+  checkHealth();
+</script>
+</body>
+</html>
