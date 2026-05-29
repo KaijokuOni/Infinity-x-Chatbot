@@ -39,6 +39,14 @@
     #status { color: #93a0bd; font-size: 13px; min-height: 18px; text-align: center; }
     .hint { color: #6b7794; font-size: 12px; text-align: center; }
     .linkbtn { background: none; border: none; color: #6f86c7; font-size: 13px; cursor: pointer; text-decoration: underline; }
+    .talkbtn {
+      min-width: 240px; padding: 15px 22px; border: none; border-radius: 14px;
+      background: #22c55e; color: #06210f; font-size: 17px; font-weight: 800; cursor: pointer;
+      font-family: inherit; transition: background .2s ease, transform .1s ease;
+    }
+    .talkbtn:active { transform: scale(.98); }
+    .talkbtn.rec { background: #ef4444; color: #fff; animation: ring 1.6s infinite; }
+    .talkbtn:disabled { background: #3a4566; color: #8a96b4; cursor: not-allowed; animation: none; }
 
     /* Start overlay */
     #intake { position: fixed; inset: 0; background: rgba(7,10,20,.92); backdrop-filter: blur(4px);
@@ -64,7 +72,7 @@
     <div class="card">
       <div class="emoji">🩺</div>
       <h2>বাংলা স্বাস্থ্য সহকারী</h2>
-      <p class="desc">বোতামে চাপ দিন — এরপর সহকারী আপনার নাম, বয়স ও সমস্যা সম্পর্কে বাংলায় জিজ্ঞাসা করবে। শুধু কথা বলুন, কিছু টাইপ করতে হবে না।</p>
+      <p class="desc">বোতামে চাপ দিন — এরপর সহকারী আপনার নাম, বয়স ও সমস্যা সম্পর্কে বাংলায় জিজ্ঞাসা করবে। বলা শুরু করতে বোতামে চাপ দিন, শেষ হলে আবার চাপ দিন।</p>
       <button id="startBtn">🎙️ শুরু করুন</button>
       <div id="intakeErr"></div>
     </div>
@@ -72,14 +80,15 @@
 
   <header>
     <h1>বাংলা স্বাস্থ্য সহকারী</h1>
-    <p>হাত দিয়ে কিছু চাপতে হবে না — শুধু বাংলায় কথা বলুন, থামলেই উত্তর আসবে</p>
+    <p>বাংলায় কথা বলুন — বলা শুরু করতে বোতামে চাপ দিন, শেষ হলে আবার চাপ দিন</p>
   </header>
   <main>
     <div id="log"></div>
     <div class="controls">
       <div id="orb" class="orb">প্রস্তুত হচ্ছে…</div>
       <div id="status"><span id="statusText"></span></div>
-      <div class="hint">স্বাভাবিকভাবে কথা বলুন · থামলে ১.৫ সেকেন্ড পর স্বয়ংক্রিয়ভাবে পাঠানো হবে</div>
+      <button id="talkBtn" class="talkbtn" disabled>🎙️ কথা বলা শুরু করুন</button>
+      <div class="hint">বলা শুরু করতে চাপুন · বলা শেষ হলে আবার চাপুন</div>
       <button id="resetBtn" class="linkbtn">🔄 নতুন রোগী / আবার শুরু</button>
     </div>
   </main>
@@ -95,18 +104,14 @@
       localStorage.setItem("s2s_session", sessionId);
     }
 
-    // ---- VAD / recording state ----
+    // ---- recording state (manual start/stop button) ----
     let stream = null, mediaRecorder = null, chunks = [];
-    let audioCtx = null, analyser = null, vadData = null, vadTimer = null;
-    let recording = false, discard = false;
-    let speechStart = 0, lastVoiceTs = 0, voicedFrames = 0;
-    let state = "idle";  // idle | listening | recording | processing | speaking | done
+    let recording = false;
+    let speechStart = 0;
+    let state = "idle";  // idle | ready | recording | processing | speaking | done
     let conversationDone = false;
 
-    const VOICE_RMS = 0.025;    // above this = speech
-    const SILENCE_MS = 1500;    // silence gap that ends the utterance
-    const MIN_SPEECH_MS = 350;  // ignore shorter blips (coughs, clicks)
-    const START_FRAMES = 2;     // consecutive loud frames needed to start
+    const MIN_SPEECH_MS = 350;  // ignore accidental ultra-short taps
 
     const ua = navigator.userAgent || "";
     const inApp = /FBAN|FBAV|Instagram|Messenger|Line\/|; wv\)/.test(ua);
@@ -121,15 +126,28 @@
     function setState(s, label) {
       state = s;
       orb.className = "orb" + ({
-        listening: " listening", recording: " speaking-user",
+        ready: " listening", recording: " speaking-user",
         processing: " processing", speaking: " speaking-bot", done: " done",
       }[s] || "");
       orb.innerHTML = {
-        listening: "🎙️<br/>শুনছি…", recording: "🗣️<br/>বলুন…",
+        ready: "🎙️<br/>আপনার পালা", recording: "🗣️<br/>বলুন…",
         processing: "⏳<br/>প্রসেস হচ্ছে", speaking: "🔊<br/>উত্তর দিচ্ছি",
         done: "✅<br/>সম্পন্ন", idle: "প্রস্তুত হচ্ছে…",
       }[s] || "";
       if (label !== undefined) statusText.textContent = label;
+    }
+
+    // Talk button reflects what tapping it will do next.
+    const talkBtn = document.getElementById("talkBtn");
+    function setTalkBtn(mode) {
+      // mode: "start" | "stop" | "wait"
+      talkBtn.classList.toggle("rec", mode === "stop");
+      talkBtn.disabled = (mode === "wait");
+      talkBtn.textContent = {
+        start: "🎙️ কথা বলা শুরু করুন",
+        stop: "⏹️ থামুন ও পাঠান",
+        wait: "⏳ অপেক্ষা করুন…",
+      }[mode] || "🎙️ কথা বলা শুরু করুন";
     }
 
     // -------------------------------------------------- start ----
@@ -147,15 +165,15 @@
       try {
         const res = await fetch("/api/greeting", { headers: { "ngrok-skip-browser-warning": "1" } });
         const data = await res.json();
-        addMsg("bot", data.reply_text || "নমস্কার, আপনার নাম ও বয়স বলুন।");
-        playAndThen(data, () => startListening());
+        addMsg("bot", data.reply_text || "অনুগ্রহ করে আপনার নাম ও বয়স বলুন।");
+        playAndThen(data, () => armTalk());
       } catch (_) {
-        addMsg("bot", "নমস্কার! অনুগ্রহ করে আপনার নাম ও বয়স বলুন।");
-        startListening();
+        addMsg("bot", "অনুগ্রহ করে আপনার নাম ও বয়স বলুন।");
+        armTalk();
       }
     });
 
-    // -------------------------------------------------- mic + VAD ----
+    // -------------------------------------------------- mic ----
     async function initMic() {
       try {
         stream = await navigator.mediaDevices.getUserMedia({
@@ -167,14 +185,6 @@
         mediaRecorder = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
         mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
         mediaRecorder.onstop = onStopped;
-
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        const src = audioCtx.createMediaStreamSource(stream);
-        analyser = audioCtx.createAnalyser();
-        analyser.fftSize = 1024;
-        src.connect(analyser);
-        vadData = new Float32Array(analyser.fftSize);
-        vadTimer = setInterval(vadTick, 25);
         return true;
       } catch (err) {
         intakeErr.textContent = "মাইক্রোফোন অনুমতি দরকার: " + (err.message || err.name);
@@ -182,52 +192,41 @@
       }
     }
 
-    function rms() {
-      analyser.getFloatTimeDomainData(vadData);
-      let sum = 0;
-      for (let i = 0; i < vadData.length; i++) sum += vadData[i] * vadData[i];
-      return Math.sqrt(sum / vadData.length);
-    }
-
-    function vadTick() {
-      if (state !== "listening" && state !== "recording") return;
-      const now = performance.now();
-      const level = rms();
-      if (level > VOICE_RMS) {
-        voicedFrames++;
-        lastVoiceTs = now;
-        if (!recording && voicedFrames >= START_FRAMES) startRec();
-      } else {
-        voicedFrames = 0;
-        if (recording && now - lastVoiceTs > SILENCE_MS) {
-          discard = (now - speechStart) < MIN_SPEECH_MS;
-          stopRec();
-        }
-      }
-    }
-
-    function startListening() {
+    // Ready for the patient's turn: enable the button to start recording.
+    function armTalk() {
       if (conversationDone) return;
-      recording = false; voicedFrames = 0;
-      if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
-      setState("listening", "আপনার পালা — কথা বলুন");
+      recording = false;
+      setState("ready", "চাপ দিয়ে কথা বলুন");
+      setTalkBtn("start");
     }
     function startRec() {
-      chunks = []; discard = false; speechStart = performance.now();
+      chunks = []; speechStart = performance.now();
       mediaRecorder.start(); recording = true;
-      setState("recording", "শুনছি…");
+      setState("recording", "বলছেন… শেষ হলে আবার চাপুন");
+      setTalkBtn("stop");
     }
     function stopRec() {
       if (!recording) return;
       recording = false;
+      setTalkBtn("wait");
       mediaRecorder.stop();  // -> onStopped
     }
 
+    // Tapping the button toggles between start and stop.
+    talkBtn.addEventListener("click", () => {
+      if (state === "ready") startRec();
+      else if (state === "recording") stopRec();
+    });
+
     async function onStopped() {
-      if (discard) { startListening(); return; }
+      const tooShort = (performance.now() - speechStart) < MIN_SPEECH_MS;
       const blob = new Blob(chunks, { type: mediaRecorder.mimeType || "audio/webm" });
-      if (blob.size < 1200) { startListening(); return; }
+      if (tooShort || blob.size < 1200) {
+        addMsg("sys", "🎙️ কিছু শোনা যায়নি — আবার চাপ দিয়ে বলুন।");
+        armTalk(); return;
+      }
       setState("processing", "প্রসেস হচ্ছে…");
+      setTalkBtn("wait");
       try {
         const fd = new FormData();
         fd.append("audio", blob, "turn.webm");
@@ -236,7 +235,7 @@
         const data = await res.json();
         if (data.stage === "filter" || (data.ok === false && !data.user_text)) {
           if (data.reply_text) addMsg("sys", "🔁 " + data.reply_text);
-          playAndThen(data, () => startListening());
+          playAndThen(data, () => armTalk());
           return;
         }
         if (data.user_text) addMsg("user", data.user_text);
@@ -249,11 +248,11 @@
             addMsg("sys", "✅ সাক্ষাৎকার সম্পন্ন। নতুন রোগীর জন্য নিচের \"আবার শুরু\" চাপুন।");
           });
         } else {
-          playAndThen(data, () => startListening());
+          playAndThen(data, () => armTalk());
         }
       } catch (err) {
         addMsg("sys", "❌ নেটওয়ার্ক সমস্যা: " + err.message);
-        startListening();
+        armTalk();
       }
     }
 
