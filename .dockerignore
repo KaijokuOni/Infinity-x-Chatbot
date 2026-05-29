@@ -1,0 +1,33 @@
+# Secrets — never bake into the image (set as platform env vars instead)
+.env
+*.key
+*.pem
+
+# Patient case database (medical data) — mounted as a volume at runtime
+data/
+
+# Local Python / uv artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.venv/
+dist/
+build/
+uv.lock
+
+# Tests, docs, tooling not needed in the runtime image
+tests/
+docs/
+.pytest_cache/
+.git/
+.github/
+.specify/
+.claude/
+
+# Editor / OS
+.DS_Store
+.vscode/
+.idea/
+*.swp
+logs/

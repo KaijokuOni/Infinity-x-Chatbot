@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Doctor Dashboard · Patient Cases</title>
+  <style>
+    :root { color-scheme: light; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh;
+      font-family: "Noto Sans Bengali", "Hind Siliguri", -apple-system, system-ui, sans-serif;
+      background: #f3f5f9; color: #1b2436;
+    }
+    header {
+      position: sticky; top: 0; z-index: 5;
+      background: #fff; border-bottom: 1px solid #e2e7f0;
+      padding: 16px 24px; display: flex; align-items: center; justify-content: space-between;
+      box-shadow: 0 1px 3px rgba(20,30,60,.05);
+    }
+    header h1 { margin: 0; font-size: 20px; font-weight: 700; }
+    header .sub { color: #6b7794; font-size: 13px; margin-top: 2px; }
+    .right { display: flex; align-items: center; gap: 14px; font-size: 13px; color: #6b7794; }
+    .live { display: inline-flex; align-items: center; gap: 6px; }
+    .live .d { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; animation: blink 1.6s infinite; }
+    @keyframes blink { 50% { opacity: .35; } }
+    main { max-width: 1100px; margin: 0 auto; padding: 22px 16px 60px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 16px; }
+    .card {
+      background: #fff; border: 1px solid #e2e7f0; border-radius: 14px; padding: 16px 18px;
+      box-shadow: 0 2px 8px rgba(20,30,60,.04); display: flex; flex-direction: column; gap: 10px;
+    }
+    .card .top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+    .patient { font-size: 17px; font-weight: 800; line-height: 1.3; }
+    .patient .age { font-size: 13px; font-weight: 600; color: #6b7794; }
+    .complaint { font-size: 14px; font-weight: 600; line-height: 1.4; color: #34405a; }
+    .complaint .lbl2 { color: #94a0b8; font-weight: 700; }
+    .badge { font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 999px; white-space: nowrap; text-transform: uppercase; letter-spacing: .03em; }
+    .sev-severe   { background: #fde2e2; color: #b91c1c; }
+    .sev-moderate { background: #fef0d3; color: #b45309; }
+    .sev-mild     { background: #d8f3e1; color: #15803d; }
+    .sev-unknown, .sev- { background: #e7ebf2; color: #5b6577; }
+    .row { font-size: 13px; color: #44506a; }
+    .row b { color: #1b2436; font-weight: 600; }
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .chip { font-size: 12px; padding: 4px 10px; border-radius: 999px; background: #eef2fb; color: #2b3a64; }
+    .chip.cond { background: #eae4fb; color: #5b3aa6; }
+    .summary { font-size: 13px; color: #34405a; background: #f7f9fd; border-left: 3px solid #c3cee6; padding: 8px 11px; border-radius: 6px; line-height: 1.5; }
+    .meta { font-size: 11px; color: #94a0b8; display: flex; justify-content: space-between; margin-top: 2px; }
+    details { font-size: 13px; }
+    details summary { cursor: pointer; color: #2563eb; font-size: 12px; user-select: none; }
+    .turn { margin: 8px 0; }
+    .turn .p { color: #1b2436; } .turn .a { color: #5b6577; }
+    .turn .lbl { font-size: 11px; font-weight: 700; color: #94a0b8; }
+    .empty { text-align: center; color: #8a96b4; padding: 80px 20px; font-size: 15px; }
+    .label { font-size: 11px; font-weight: 700; color: #94a0b8; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 2px; }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>🩺 Doctor Dashboard</h1>
+      <div class="sub">Patient intake cases · collected by the Bangla voice assistant</div>
+    </div>
+    <div class="right">
+      <span id="count">0 cases</span>
+      <span class="live"><span class="d"></span> live</span>
+    </div>
+  </header>
+  <main>
+    <div id="grid" class="grid"></div>
+    <div id="empty" class="empty" style="display:none">No patient cases yet. They appear here as patients talk to the voice assistant.</div>
+  </main>
+
+  <script>
+    const grid = document.getElementById("grid");
+    const empty = document.getElementById("empty");
+    const countEl = document.getElementById("count");
+
+    function esc(s) { const d = document.createElement("div"); d.textContent = s == null ? "" : s; return d.innerHTML; }
+    function ago(ts) {
+      const s = Math.max(0, Math.floor(Date.now() / 1000 - ts));
+      if (s < 60) return s + "s ago";
+      if (s < 3600) return Math.floor(s / 60) + "m ago";
+      if (s < 86400) return Math.floor(s / 3600) + "h ago";
+      return new Date(ts * 1000).toLocaleDateString();
+    }
+    function sevClass(s) { return "sev-" + (s || "unknown").toLowerCase(); }
+
+    function chips(arr, cls) {
+      if (!arr || !arr.length) return '<span class="row" style="color:#aab3c6">—</span>';
+      return '<div class="chips">' + arr.map(x => `<span class="chip ${cls || ""}">${esc(x)}</span>`).join("") + "</div>";
+    }
+
+    function transcriptHtml(t) {
+      if (!t || !t.length) return "";
+      const rows = t.map(turn =>
+        `<div class="turn"><div><span class="lbl">রোগী</span> <span class="p">${esc(turn.user)}</span></div>` +
+        `<div><span class="lbl">সহকারী</span> <span class="a">${esc(turn.assistant)}</span></div></div>`
+      ).join("");
+      return `<details><summary>View full conversation (${t.length})</summary><div style="margin-top:8px">${rows}</div></details>`;
+    }
+
+    function card(c) {
+      const name = esc(c.patient_name) || '<span style="color:#aab3c6">Unknown patient</span>';
+      const age = c.patient_age ? `<span class="age"> · ${esc(c.patient_age)} yrs</span>` : "";
+      const complaint = c.chief_complaint
+        ? `<div class="complaint"><span class="lbl2">Complaint:</span> ${esc(c.chief_complaint)}</div>`
+        : "";
+      return `<div class="card">
+        <div class="top">
+          <div class="patient">${name}${age}</div>
+          <span class="badge ${sevClass(c.severity)}">${esc(c.severity || "unknown")}</span>
+        </div>
+        ${complaint}
+        <div><div class="label">Symptoms</div>${chips(c.symptoms)}</div>
+        <div class="row"><b>Duration:</b> ${esc(c.duration) || "—"}</div>
+        <div><div class="label">Tests done</div>${chips(c.tests_done)}</div>
+        <div><div class="label">Possible conditions</div>${chips(c.possible_conditions, "cond")}</div>
+        ${c.summary ? `<div class="summary">${esc(c.summary)}</div>` : ""}
+        ${transcriptHtml(c.transcript)}
+        <div class="meta"><span>${esc(c.session_id)}</span><span>${c.turns} turns · ${ago(c.updated_at)}</span></div>
+      </div>`;
+    }
+
+    async function load() {
+      try {
+        const res = await fetch("/api/cases", { headers: { "ngrok-skip-browser-warning": "1" } });
+        const cases = await res.json();
+        countEl.textContent = cases.length + (cases.length === 1 ? " case" : " cases");
+        if (!cases.length) { grid.innerHTML = ""; empty.style.display = "block"; return; }
+        empty.style.display = "none";
+        grid.innerHTML = cases.map(card).join("");
+      } catch (_) { /* keep last render on transient error */ }
+    }
+
+    load();
+    setInterval(load, 5000);
+  </script>
+</body>
+</html>

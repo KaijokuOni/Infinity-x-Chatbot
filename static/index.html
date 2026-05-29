@@ -1,782 +1,285 @@
 <!DOCTYPE html>
 <html lang="bn">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>OmniCare — ভীণা | Bangla Medical Assistant</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>বাংলা স্বাস্থ্য সহকারী</title>
   <style>
-    :root {
-      --bg: #0a0f1e;
-      --surface: #111827;
-      --card: #1a2235;
-      --border: #2a3450;
-      --accent: #4f8ef7;
-      --accent2: #7c3aed;
-      --success: #10b981;
-      --danger: #ef4444;
-      --text: #e2e8f0;
-      --muted: #64748b;
-      --radius: 14px;
-    }
-
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
     body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'Noto Sans Bengali', 'Segoe UI', system-ui, sans-serif;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
+      margin: 0; min-height: 100vh;
+      font-family: "Noto Sans Bengali", "Hind Siliguri", -apple-system, system-ui, sans-serif;
+      background: radial-gradient(1200px 800px at 50% -10%, #1d2a4a 0%, #0b1020 55%, #070a14 100%);
+      color: #e7ecf5; display: flex; flex-direction: column; align-items: center;
     }
+    header { text-align: center; margin: 26px 16px 4px; }
+    header h1 { margin: 0; font-size: 22px; font-weight: 700; }
+    header p { margin: 6px 0 0; color: #93a0bd; font-size: 13px; }
+    main { width: 100%; max-width: 720px; padding: 12px 16px; flex: 1; display: flex; flex-direction: column; }
+    #log { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding: 12px 4px; min-height: 220px; }
+    .msg { max-width: 86%; padding: 10px 14px; border-radius: 16px; line-height: 1.55; font-size: 16px; white-space: pre-wrap; word-wrap: break-word; }
+    .user { align-self: flex-end; background: #2563eb; border-bottom-right-radius: 4px; }
+    .bot  { align-self: flex-start; background: #1c2440; border: 1px solid #2c3868; border-bottom-left-radius: 4px; }
+    .sys  { align-self: center; background: transparent; color: #8a96b4; font-size: 13px; text-align: center; }
+    .meta { font-size: 11px; color: #9fb0d6; margin-top: 4px; opacity: .8; }
+    .controls { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 14px 0 26px; }
+    .orb {
+      width: 116px; height: 116px; border-radius: 50%; position: relative;
+      display: flex; align-items: center; justify-content: center; text-align: center;
+      font-size: 13px; font-weight: 600; color: #cdd7ee; line-height: 1.3;
+      background: #1c2440; border: 2px solid #2c3868; transition: all .25s ease;
+    }
+    .orb.listening { border-color: #22c55e; animation: ring 1.8s infinite; }
+    .orb.speaking-user { border-color: #22c55e; background: #14321f; color: #d6ffe4; transform: scale(1.05); }
+    .orb.processing { border-color: #f59e0b; background: #2a2410; color: #ffe6b0; }
+    .orb.speaking-bot { border-color: #3b82f6; background: #14213f; color: #cfe0ff; }
+    .orb.done { border-color: #475069; color: #8a96b4; }
+    @keyframes ring { 0% { box-shadow: 0 0 0 0 rgba(34,197,94,.45);} 70% { box-shadow: 0 0 0 20px rgba(34,197,94,0);} 100% { box-shadow: 0 0 0 0 rgba(34,197,94,0);} }
+    #status { color: #93a0bd; font-size: 13px; min-height: 18px; text-align: center; }
+    .hint { color: #6b7794; font-size: 12px; text-align: center; }
+    .linkbtn { background: none; border: none; color: #6f86c7; font-size: 13px; cursor: pointer; text-decoration: underline; }
 
-    header {
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      padding: 16px 24px;
-      display: flex;
-      align-items: center;
-      gap: 16px;
-    }
-
-    .logo { font-size: 22px; font-weight: 700; color: var(--accent); }
-    .logo span { color: var(--text); }
-    .status-dot {
-      width: 10px; height: 10px; border-radius: 50%;
-      background: var(--muted); transition: background 0.3s;
-    }
-    .status-dot.online { background: var(--success); }
-    .status-dot.recording { background: var(--danger); animation: pulse 1s infinite; }
-
-    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
-
-    main {
-      flex: 1;
-      display: grid;
-      grid-template-columns: 1fr 380px;
-      gap: 0;
-      max-width: 1200px;
-      width: 100%;
-      margin: 0 auto;
-      padding: 24px;
-    }
-
-    @media (max-width: 768px) {
-      main { grid-template-columns: 1fr; }
-      .sidebar { order: -1; }
-    }
-
-    .chat-panel {
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-      padding-right: 24px;
-    }
-
-    .avatar-wrap {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 12px;
-      padding: 24px;
-      background: var(--card);
-      border-radius: var(--radius);
-      border: 1px solid var(--border);
-    }
-
-    .avatar-ring {
-      width: 120px; height: 120px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      display: flex; align-items: center; justify-content: center;
-      font-size: 52px;
-      box-shadow: 0 0 0 0 rgba(79,142,247,0.4);
-      transition: box-shadow 0.3s;
-    }
-
-    .avatar-ring.speaking {
-      animation: speakPulse 1.2s ease-in-out infinite;
-    }
-
-    @keyframes speakPulse {
-      0% { box-shadow: 0 0 0 0 rgba(79,142,247,0.6); }
-      70% { box-shadow: 0 0 0 20px rgba(79,142,247,0); }
-      100% { box-shadow: 0 0 0 0 rgba(79,142,247,0); }
-    }
-
-    .avatar-name { font-size: 20px; font-weight: 600; }
-    .avatar-subtitle { font-size: 13px; color: var(--muted); }
-    .stage-badge {
-      padding: 4px 12px;
-      border-radius: 20px;
-      font-size: 12px;
-      background: rgba(79,142,247,0.15);
-      color: var(--accent);
-      border: 1px solid rgba(79,142,247,0.3);
-    }
-
-    .chat-messages {
-      flex: 1;
-      min-height: 300px;
-      max-height: 400px;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      padding: 16px;
-      background: var(--card);
-      border-radius: var(--radius);
-      border: 1px solid var(--border);
-    }
-
-    .msg {
-      display: flex;
-      gap: 10px;
-      max-width: 85%;
-    }
-    .msg.user { align-self: flex-end; flex-direction: row-reverse; }
-    .msg-bubble {
-      padding: 10px 14px;
-      border-radius: 12px;
-      font-size: 14px;
-      line-height: 1.5;
-    }
-    .msg.assistant .msg-bubble {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-bottom-left-radius: 4px;
-    }
-    .msg.user .msg-bubble {
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      color: white;
-      border-bottom-right-radius: 4px;
-    }
-    .msg-label { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
-
-    .thinking {
-      display: flex; gap: 4px; padding: 12px;
-      align-items: center;
-    }
-    .thinking span {
-      width: 7px; height: 7px; border-radius: 50%;
-      background: var(--accent);
-      animation: bounce 1.2s infinite;
-    }
-    .thinking span:nth-child(2) { animation-delay: 0.2s; }
-    .thinking span:nth-child(3) { animation-delay: 0.4s; }
-    @keyframes bounce { 0%,80%,100%{transform:translateY(0)} 40%{transform:translateY(-8px)} }
-
-    .controls {
-      display: flex;
-      gap: 12px;
-      align-items: center;
-    }
-
-    .text-input-wrap {
-      flex: 1;
-      display: flex;
-      gap: 8px;
-    }
-
-    #textInput {
-      flex: 1;
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      color: var(--text);
-      padding: 10px 14px;
-      font-size: 14px;
-      outline: none;
-      transition: border-color 0.2s;
-    }
-    #textInput:focus { border-color: var(--accent); }
-    #textInput::placeholder { color: var(--muted); }
-
-    button {
-      border: none; cursor: pointer; border-radius: 10px;
-      font-size: 14px; font-weight: 600; transition: all 0.2s;
-    }
-
-    .btn-primary {
-      background: var(--accent);
-      color: white;
-      padding: 10px 18px;
-    }
-    .btn-primary:hover { background: #3b7de8; }
-
-    .btn-record {
-      width: 52px; height: 52px;
-      border-radius: 50%;
-      background: var(--card);
-      border: 2px solid var(--border);
-      color: var(--text);
-      font-size: 22px;
-      display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0;
-    }
-    .btn-record.recording {
-      background: var(--danger);
-      border-color: var(--danger);
-      color: white;
-      animation: pulse 1s infinite;
-    }
-    .btn-record:hover:not(.recording) { border-color: var(--accent); }
-
-    .sidebar {
-      padding-left: 24px;
-      border-left: 1px solid var(--border);
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-
+    /* Start overlay */
+    #intake { position: fixed; inset: 0; background: rgba(7,10,20,.92); backdrop-filter: blur(4px);
+      display: flex; align-items: center; justify-content: center; z-index: 20; padding: 20px; }
     .card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 18px;
+      width: 100%; max-width: 380px; background: #121a30; border: 1px solid #2c3868;
+      border-radius: 18px; padding: 30px 24px; box-shadow: 0 20px 60px rgba(0,0,0,.5); text-align: center;
     }
-
-    .card h3 {
-      font-size: 13px;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--muted);
-      margin-bottom: 14px;
+    .card .emoji { font-size: 44px; }
+    .card h2 { margin: 10px 0 6px; font-size: 21px; }
+    .card .desc { color: #93a0bd; font-size: 14px; margin: 0 0 22px; line-height: 1.6; }
+    #startBtn {
+      width: 100%; padding: 14px; border: none; border-radius: 12px;
+      background: #2563eb; color: #fff; font-size: 17px; font-weight: 700; cursor: pointer;
+      font-family: inherit;
     }
-
-    .summary-grid {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .summary-row {
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-    }
-
-    .summary-label {
-      font-size: 11px;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-    }
-
-    .summary-value {
-      font-size: 14px;
-      color: var(--text);
-    }
-
-    .category-chip {
-      display: inline-block;
-      padding: 3px 10px;
-      border-radius: 20px;
-      font-size: 12px;
-      background: rgba(124,58,237,0.2);
-      color: #a78bfa;
-      border: 1px solid rgba(124,58,237,0.3);
-    }
-
-    .config-row {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      margin-bottom: 10px;
-    }
-
-    .config-row label { font-size: 12px; color: var(--muted); }
-
-    select {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      color: var(--text);
-      border-radius: 8px;
-      padding: 6px 10px;
-      font-size: 13px;
-      width: 100%;
-      outline: none;
-    }
-    select:focus { border-color: var(--accent); }
-
-    .btn-danger {
-      background: rgba(239,68,68,0.15);
-      color: var(--danger);
-      border: 1px solid rgba(239,68,68,0.3);
-      padding: 8px 14px;
-      width: 100%;
-    }
-    .btn-danger:hover { background: rgba(239,68,68,0.25); }
-
-    .btn-success {
-      background: rgba(16,185,129,0.15);
-      color: var(--success);
-      border: 1px solid rgba(16,185,129,0.3);
-      padding: 8px 14px;
-      width: 100%;
-      margin-top: 6px;
-    }
-    .btn-success:hover { background: rgba(16,185,129,0.25); }
-
-    .volume-bar {
-      height: 4px;
-      background: var(--border);
-      border-radius: 2px;
-      overflow: hidden;
-      margin-top: 8px;
-    }
-    .volume-fill {
-      height: 100%;
-      background: var(--accent);
-      width: 0%;
-      transition: width 0.1s;
-    }
-
-    #toast {
-      position: fixed; bottom: 24px; right: 24px;
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 12px 18px;
-      font-size: 14px;
-      opacity: 0;
-      transform: translateY(10px);
-      transition: all 0.3s;
-      pointer-events: none;
-      z-index: 999;
-    }
-    #toast.show { opacity: 1; transform: translateY(0); }
+    #startBtn:disabled { background: #3a4566; cursor: not-allowed; }
+    #intakeErr { color: #f87171; font-size: 13px; min-height: 16px; margin-top: 10px; }
   </style>
 </head>
 <body>
-
-<header>
-  <div class="logo">OmniCare <span>| ভীণা</span></div>
-  <div class="status-dot" id="statusDot"></div>
-  <span style="font-size:13px;color:var(--muted)" id="statusText">সংযোগ করা হচ্ছে...</span>
-</header>
-
-<main>
-  <!-- Chat Panel -->
-  <div class="chat-panel">
-
-    <div class="avatar-wrap">
-      <div class="avatar-ring" id="avatarRing">🏥</div>
-      <div class="avatar-name">ভীণা</div>
-      <div class="avatar-subtitle">OmniCare স্বাস্থ্য সহকারী</div>
-      <div class="stage-badge" id="stageBadge">প্রস্তুত</div>
+  <div id="intake">
+    <div class="card">
+      <div class="emoji">🩺</div>
+      <h2>বাংলা স্বাস্থ্য সহকারী</h2>
+      <p class="desc">বোতামে চাপ দিন — এরপর সহকারী আপনার নাম, বয়স ও সমস্যা সম্পর্কে বাংলায় জিজ্ঞাসা করবে। শুধু কথা বলুন, কিছু টাইপ করতে হবে না।</p>
+      <button id="startBtn">🎙️ শুরু করুন</button>
+      <div id="intakeErr"></div>
     </div>
+  </div>
 
-    <div class="chat-messages" id="chatMessages">
-      <div class="msg assistant">
-        <div>
-          <div class="msg-label">ভীণা</div>
-          <div class="msg-bubble">শুরু করতে "নতুন সেশন শুরু করুন" বোতামে ক্লিক করুন।</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="volume-bar"><div class="volume-fill" id="volumeFill"></div></div>
-
+  <header>
+    <h1>বাংলা স্বাস্থ্য সহকারী</h1>
+    <p>হাত দিয়ে কিছু চাপতে হবে না — শুধু বাংলায় কথা বলুন, থামলেই উত্তর আসবে</p>
+  </header>
+  <main>
+    <div id="log"></div>
     <div class="controls">
-      <button class="btn-record" id="recordBtn" title="ভয়েস রেকর্ড করুন" disabled>🎤</button>
-      <div class="text-input-wrap">
-        <input type="text" id="textInput" placeholder="বাংলায় লিখুন অথবা মাইক্রোফোন ব্যবহার করুন..." disabled />
-        <button class="btn-primary" id="sendBtn" disabled>পাঠান</button>
-      </div>
+      <div id="orb" class="orb">প্রস্তুত হচ্ছে…</div>
+      <div id="status"><span id="statusText"></span></div>
+      <div class="hint">স্বাভাবিকভাবে কথা বলুন · থামলে ১.৫ সেকেন্ড পর স্বয়ংক্রিয়ভাবে পাঠানো হবে</div>
+      <button id="resetBtn" class="linkbtn">🔄 নতুন রোগী / আবার শুরু</button>
     </div>
+  </main>
 
-  </div>
+  <script>
+    const logEl = document.getElementById("log");
+    const orb = document.getElementById("orb");
+    const statusText = document.getElementById("statusText");
 
-  <!-- Sidebar -->
-  <div class="sidebar">
-
-    <div class="card">
-      <h3>সেশন</h3>
-      <button class="btn-success" id="startBtn">▶ নতুন সেশন শুরু করুন</button>
-      <button class="btn-danger" id="newSessionBtn" style="margin-top:6px;display:none">↺ নতুন রোগী</button>
-      <button class="btn-primary" style="width:100%;margin-top:6px;display:none" id="summaryBtn">📋 ডাক্তারি সারসংক্ষেপ</button>
-    </div>
-
-    <div class="card" id="summaryCard" style="display:none">
-      <h3>রোগী সারসংক্ষেপ</h3>
-      <div class="summary-grid" id="summaryGrid"></div>
-    </div>
-
-    <div class="card">
-      <h3>কনফিগ</h3>
-      <div class="config-row">
-        <label>LLM প্রদানকারী</label>
-        <select id="llmSelect">
-          <option value="ollama">Ollama (লোকাল)</option>
-          <option value="openai">OpenAI GPT</option>
-          <option value="anthropic">Anthropic Claude</option>
-          <option value="gemini">Google Gemini</option>
-        </select>
-      </div>
-      <div class="config-row" id="modelRow">
-        <label>Ollama মডেল</label>
-        <select id="modelSelect">
-          <option value="aya-expanse:8b">aya-expanse:8b ✓</option>
-          <option value="qwen2.5:14b">qwen2.5:14b</option>
-          <option value="qwen2.5-coder:1.5b">qwen2.5-coder:1.5b</option>
-        </select>
-      </div>
-      <div class="config-row">
-        <label>STT প্রদানকারী</label>
-        <select id="sttSelect">
-          <option value="openai">OpenAI Whisper</option>
-          <option value="groq">Groq Whisper (বিনামূল্যে)</option>
-          <option value="mlx">MLX Whisper (লোকাল)</option>
-          <option value="gemini">Gemini (সেরা বাংলা)</option>
-        </select>
-      </div>
-      <button class="btn-primary" style="width:100%;margin-top:6px" id="saveConfigBtn">কনফিগ সংরক্ষণ</button>
-    </div>
-
-  </div>
-</main>
-
-<div id="toast"></div>
-
-<audio id="responseAudio" style="display:none"></audio>
-
-<script>
-  const API = '';  // relative URLs
-  let sessionId = null;
-  let mediaRecorder = null;
-  let audioChunks = [];
-  let isRecording = false;
-  let analyser = null;
-  let animFrame = null;
-
-  const chatMessages = document.getElementById('chatMessages');
-  const recordBtn = document.getElementById('recordBtn');
-  const sendBtn = document.getElementById('sendBtn');
-  const textInput = document.getElementById('textInput');
-  const avatarRing = document.getElementById('avatarRing');
-  const stageBadge = document.getElementById('stageBadge');
-  const statusDot = document.getElementById('statusDot');
-  const statusText = document.getElementById('statusText');
-  const responseAudio = document.getElementById('responseAudio');
-  const summaryCard = document.getElementById('summaryCard');
-  const summaryGrid = document.getElementById('summaryGrid');
-  const summaryBtn = document.getElementById('summaryBtn');
-  const newSessionBtn = document.getElementById('newSessionBtn');
-  const startBtn = document.getElementById('startBtn');
-  const volumeFill = document.getElementById('volumeFill');
-
-  const stageLabels = {
-    intro: 'সূচনা',
-    followup: 'ফলো-আপ প্রশ্ন',
-    complete: 'সম্পন্ন',
-  };
-
-  // ── Health check ──────────────────────────────────────────────────────────
-  async function checkHealth() {
-    try {
-      const r = await fetch('/api/health');
-      const d = await r.json();
-      statusDot.className = 'status-dot online';
-      statusText.textContent = `${d.llm_provider} | ${d.stt_provider} | ${d.tts_provider}`;
-      loadConfig();
-    } catch {
-      statusText.textContent = 'সার্ভার সংযোগ নেই';
+    let sessionId = localStorage.getItem("s2s_session");
+    if (!sessionId) {
+      sessionId = "web-" + Date.now() + "-" + Math.random().toString(36).slice(2, 7);
+      localStorage.setItem("s2s_session", sessionId);
     }
-  }
 
-  async function loadConfig() {
-    try {
-      const r = await fetch('/api/config');
-      const d = await r.json();
-      document.getElementById('llmSelect').value = d.llm_provider;
-      document.getElementById('modelSelect').value = d.ollama_model;
-      document.getElementById('sttSelect').value = d.stt_provider;
-    } catch {}
-  }
+    // ---- VAD / recording state ----
+    let stream = null, mediaRecorder = null, chunks = [];
+    let audioCtx = null, analyser = null, vadData = null, vadTimer = null;
+    let recording = false, discard = false;
+    let speechStart = 0, lastVoiceTs = 0, voicedFrames = 0;
+    let state = "idle";  // idle | listening | recording | processing | speaking | done
+    let conversationDone = false;
 
-  document.getElementById('saveConfigBtn').addEventListener('click', async () => {
-    const body = {
-      llm_provider: document.getElementById('llmSelect').value,
-      ollama_model: document.getElementById('modelSelect').value,
-      stt_provider: document.getElementById('sttSelect').value,
-    };
-    try {
-      await fetch('/api/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-      toast('কনফিগ আপডেট হয়েছে');
-    } catch { toast('কনফিগ আপডেট ব্যর্থ', true); }
-  });
+    const VOICE_RMS = 0.025;    // above this = speech
+    const SILENCE_MS = 1500;    // silence gap that ends the utterance
+    const MIN_SPEECH_MS = 350;  // ignore shorter blips (coughs, clicks)
+    const START_FRAMES = 2;     // consecutive loud frames needed to start
 
-  document.getElementById('llmSelect').addEventListener('change', (e) => {
-    document.getElementById('modelRow').style.display = e.target.value === 'ollama' ? '' : 'none';
-  });
+    const ua = navigator.userAgent || "";
+    const inApp = /FBAN|FBAV|Instagram|Messenger|Line\/|; wv\)/.test(ua);
 
-  // ── Session ───────────────────────────────────────────────────────────────
-  startBtn.addEventListener('click', startSession);
-
-  async function startSession() {
-    startBtn.disabled = true;
-    try {
-      const r = await fetch('/api/session/start', { method: 'POST' });
-      const d = await r.json();
-      sessionId = d.session_id;
-
-      chatMessages.innerHTML = '';
-      summaryCard.style.display = 'none';
-      summaryBtn.style.display = 'none';
-      newSessionBtn.style.display = '';
-      startBtn.style.display = 'none';
-
-      addMessage('assistant', d.message);
-      updateStage(d.stage);
-
-      enableControls(true);
-      playAudio(d.audio_url);
-    } catch (e) {
-      toast('সেশন শুরু করতে সমস্যা হয়েছে: ' + e.message, true);
-      startBtn.disabled = false;
+    function addMsg(cls, text, meta) {
+      const d = document.createElement("div");
+      d.className = "msg " + cls;
+      d.textContent = text;
+      if (meta) { const m = document.createElement("div"); m.className = "meta"; m.textContent = meta; d.appendChild(m); }
+      logEl.appendChild(d); logEl.scrollTop = logEl.scrollHeight; return d;
     }
-  }
-
-  newSessionBtn.addEventListener('click', async () => {
-    if (sessionId) {
-      await fetch(`/api/session/${sessionId}`, { method: 'DELETE' });
+    function setState(s, label) {
+      state = s;
+      orb.className = "orb" + ({
+        listening: " listening", recording: " speaking-user",
+        processing: " processing", speaking: " speaking-bot", done: " done",
+      }[s] || "");
+      orb.innerHTML = {
+        listening: "🎙️<br/>শুনছি…", recording: "🗣️<br/>বলুন…",
+        processing: "⏳<br/>প্রসেস হচ্ছে", speaking: "🔊<br/>উত্তর দিচ্ছি",
+        done: "✅<br/>সম্পন্ন", idle: "প্রস্তুত হচ্ছে…",
+      }[s] || "";
+      if (label !== undefined) statusText.textContent = label;
     }
-    sessionId = null;
-    chatMessages.innerHTML = '';
-    summaryCard.style.display = 'none';
-    enableControls(false);
-    newSessionBtn.style.display = 'none';
-    summaryBtn.style.display = 'none';
-    startBtn.style.display = '';
-    startBtn.disabled = false;
-    stageBadge.textContent = 'প্রস্তুত';
-    addMessage('assistant', 'শুরু করতে "নতুন সেশন শুরু করুন" বোতামে ক্লিক করুন।');
-  });
 
-  // ── Text input ────────────────────────────────────────────────────────────
-  sendBtn.addEventListener('click', () => sendText());
-  textInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendText(); });
+    // -------------------------------------------------- start ----
+    const startBtn = document.getElementById("startBtn");
+    const intakeErr = document.getElementById("intakeErr");
 
-  async function sendText() {
-    const text = textInput.value.trim();
-    if (!text || !sessionId) return;
-    textInput.value = '';
-    await processUserInput({ text });
-  }
-
-  // ── Voice recording ───────────────────────────────────────────────────────
-  recordBtn.addEventListener('click', () => {
-    if (isRecording) stopRecording();
-    else startRecording();
-  });
-
-  async function startRecording() {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-
-      // volume analyser
-      const ctx = new AudioContext();
-      const src = ctx.createMediaStreamSource(stream);
-      analyser = ctx.createAnalyser();
-      analyser.fftSize = 256;
-      src.connect(analyser);
-      drawVolume();
-
-      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-        ? 'audio/webm;codecs=opus'
-        : 'audio/ogg;codecs=opus';
-
-      mediaRecorder = new MediaRecorder(stream, { mimeType });
-      audioChunks = [];
-
-      mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunks.push(e.data); };
-      mediaRecorder.onstop = async () => {
-        cancelAnimationFrame(animFrame);
-        volumeFill.style.width = '0%';
-        const blob = new Blob(audioChunks, { type: mimeType });
-        await processUserInput({ audioBlob: blob, mimeType });
-        stream.getTracks().forEach(t => t.stop());
-      };
-
-      mediaRecorder.start(100);
-      isRecording = true;
-      recordBtn.classList.add('recording');
-      recordBtn.textContent = '⏹';
-      statusDot.className = 'status-dot recording';
-    } catch (e) {
-      toast('মাইক্রোফোন অ্যাক্সেস পাওয়া যায়নি', true);
-    }
-  }
-
-  function stopRecording() {
-    if (mediaRecorder && isRecording) {
-      mediaRecorder.stop();
-      isRecording = false;
-      recordBtn.classList.remove('recording');
-      recordBtn.textContent = '🎤';
-      statusDot.className = 'status-dot online';
-    }
-  }
-
-  function drawVolume() {
-    const data = new Uint8Array(analyser.frequencyBinCount);
-    analyser.getByteFrequencyData(data);
-    const avg = data.reduce((a, b) => a + b, 0) / data.length;
-    volumeFill.style.width = Math.min(100, avg * 2) + '%';
-    animFrame = requestAnimationFrame(drawVolume);
-  }
-
-  // ── Process input (voice or text) ─────────────────────────────────────────
-  async function processUserInput({ text, audioBlob, mimeType }) {
-    if (!sessionId) return;
-    enableControls(false);
-
-    let transcription = text;
-
-    if (audioBlob) {
-      // Show "processing" state while transcribing
-      const loadingId = addMessage('assistant', null, true);
+    startBtn.addEventListener("click", async () => {
+      startBtn.disabled = true; intakeErr.textContent = "মাইক্রোফোন চালু হচ্ছে…";
+      const ok = await initMic();
+      if (!ok) { startBtn.disabled = false; return; }
+      document.getElementById("intake").style.display = "none";
+      if (inApp) addMsg("sys", "⚠️ ফেসবুক/মেসেঞ্জার অ্যাপের ভেতরে মাইক কাজ নাও করতে পারে। সমস্যা হলে Chrome বা Safari-তে খুলুন।");
+      setState("processing", "সহকারী প্রস্তুত হচ্ছে…");
+      // Play the spoken greeting (asks name + age), then start listening.
       try {
-        const form = new FormData();
-        form.append('audio', audioBlob, `audio.webm`);
-        const r = await fetch(`/api/voice/process?session_id=${sessionId}`, {
-          method: 'POST', body: form,
-        });
-        if (!r.ok) throw new Error(await r.text());
-        const d = await r.json();
-        removeMessage(loadingId);
-        addMessage('user', d.transcription);
-        addMessage('assistant', d.response);
-        updateStage(d.stage);
-        playAudio(d.audio_url);
-        if (d.has_summary) {
-          summaryBtn.style.display = '';
-        }
-      } catch (e) {
-        removeMessage(loadingId);
-        toast('ত্রুটি: ' + e.message, true);
+        const res = await fetch("/api/greeting", { headers: { "ngrok-skip-browser-warning": "1" } });
+        const data = await res.json();
+        addMsg("bot", data.reply_text || "নমস্কার, আপনার নাম ও বয়স বলুন।");
+        playAndThen(data, () => startListening());
+      } catch (_) {
+        addMsg("bot", "নমস্কার! অনুগ্রহ করে আপনার নাম ও বয়স বলুন।");
+        startListening();
       }
-    } else {
-      addMessage('user', text);
-      const loadingId = addMessage('assistant', null, true);
+    });
+
+    // -------------------------------------------------- mic + VAD ----
+    async function initMic() {
       try {
-        const r = await fetch('/api/text/process', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ session_id: sessionId, text }),
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true },
         });
-        if (!r.ok) throw new Error(await r.text());
-        const d = await r.json();
-        removeMessage(loadingId);
-        addMessage('assistant', d.response);
-        updateStage(d.stage);
-        playAudio(d.audio_url);
-        if (d.has_summary) {
-          summaryBtn.style.display = '';
+        const mime = MediaRecorder.isTypeSupported("audio/webm;codecs=opus") ? "audio/webm;codecs=opus"
+                   : MediaRecorder.isTypeSupported("audio/webm") ? "audio/webm"
+                   : MediaRecorder.isTypeSupported("audio/mp4") ? "audio/mp4" : "";
+        mediaRecorder = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+        mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
+        mediaRecorder.onstop = onStopped;
+
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const src = audioCtx.createMediaStreamSource(stream);
+        analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 1024;
+        src.connect(analyser);
+        vadData = new Float32Array(analyser.fftSize);
+        vadTimer = setInterval(vadTick, 25);
+        return true;
+      } catch (err) {
+        intakeErr.textContent = "মাইক্রোফোন অনুমতি দরকার: " + (err.message || err.name);
+        return false;
+      }
+    }
+
+    function rms() {
+      analyser.getFloatTimeDomainData(vadData);
+      let sum = 0;
+      for (let i = 0; i < vadData.length; i++) sum += vadData[i] * vadData[i];
+      return Math.sqrt(sum / vadData.length);
+    }
+
+    function vadTick() {
+      if (state !== "listening" && state !== "recording") return;
+      const now = performance.now();
+      const level = rms();
+      if (level > VOICE_RMS) {
+        voicedFrames++;
+        lastVoiceTs = now;
+        if (!recording && voicedFrames >= START_FRAMES) startRec();
+      } else {
+        voicedFrames = 0;
+        if (recording && now - lastVoiceTs > SILENCE_MS) {
+          discard = (now - speechStart) < MIN_SPEECH_MS;
+          stopRec();
         }
-      } catch (e) {
-        removeMessage(loadingId);
-        toast('ত্রুটি: ' + e.message, true);
       }
     }
 
-    enableControls(true);
-  }
-
-  // ── Summary ───────────────────────────────────────────────────────────────
-  summaryBtn.addEventListener('click', async () => {
-    if (!sessionId) return;
-    try {
-      const r = await fetch(`/api/session/${sessionId}/summary`);
-      const d = await r.json();
-      renderSummary(d);
-    } catch (e) {
-      toast('সারসংক্ষেপ লোড করা যায়নি', true);
+    function startListening() {
+      if (conversationDone) return;
+      recording = false; voicedFrames = 0;
+      if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
+      setState("listening", "আপনার পালা — কথা বলুন");
     }
-  });
+    function startRec() {
+      chunks = []; discard = false; speechStart = performance.now();
+      mediaRecorder.start(); recording = true;
+      setState("recording", "শুনছি…");
+    }
+    function stopRec() {
+      if (!recording) return;
+      recording = false;
+      mediaRecorder.stop();  // -> onStopped
+    }
 
-  function renderSummary(data) {
-    const labels = {
-      category: 'বিভাগ',
-      chief_complaint: 'প্রধান সমস্যা',
-      duration: 'সময়কাল',
-      severity: 'তীব্রতা',
-      symptoms: 'লক্ষণসমূহ',
-      history: 'পূর্ববর্তী ইতিহাস',
-      doctor_note: 'ডাক্তারের নোট',
-    };
-
-    summaryGrid.innerHTML = '';
-    for (const [key, label] of Object.entries(labels)) {
-      if (!data[key]) continue;
-      const row = document.createElement('div');
-      row.className = 'summary-row';
-      let val = data[key];
-      if (key === 'category') {
-        val = `<span class="category-chip">${val}</span>`;
+    async function onStopped() {
+      if (discard) { startListening(); return; }
+      const blob = new Blob(chunks, { type: mediaRecorder.mimeType || "audio/webm" });
+      if (blob.size < 1200) { startListening(); return; }
+      setState("processing", "প্রসেস হচ্ছে…");
+      try {
+        const fd = new FormData();
+        fd.append("audio", blob, "turn.webm");
+        fd.append("session_id", sessionId);
+        const res = await fetch("/api/turn", { method: "POST", body: fd });
+        const data = await res.json();
+        if (data.stage === "filter" || (data.ok === false && !data.user_text)) {
+          if (data.reply_text) addMsg("sys", "🔁 " + data.reply_text);
+          playAndThen(data, () => startListening());
+          return;
+        }
+        if (data.user_text) addMsg("user", data.user_text);
+        const meta = [data.latency_ms ? data.latency_ms + " ms" : "", data.model || ""].filter(Boolean).join(" · ");
+        addMsg("bot", data.reply_text || data.error || "একটি সমস্যা হয়েছে।", meta);
+        if (data.done) {
+          conversationDone = true;
+          playAndThen(data, () => {
+            setState("done", "ধন্যবাদ! আপনার তথ্য ডাক্তারের কাছে পাঠানো হয়েছে।");
+            addMsg("sys", "✅ সাক্ষাৎকার সম্পন্ন। নতুন রোগীর জন্য নিচের \"আবার শুরু\" চাপুন।");
+          });
+        } else {
+          playAndThen(data, () => startListening());
+        }
+      } catch (err) {
+        addMsg("sys", "❌ নেটওয়ার্ক সমস্যা: " + err.message);
+        startListening();
       }
-      row.innerHTML = `<div class="summary-label">${label}</div><div class="summary-value">${val}</div>`;
-      summaryGrid.appendChild(row);
     }
 
-    summaryCard.style.display = '';
-  }
-
-  // ── Audio playback ────────────────────────────────────────────────────────
-  function playAudio(url) {
-    avatarRing.classList.add('speaking');
-    responseAudio.src = url + '?t=' + Date.now();
-    responseAudio.play().catch(() => {});
-    responseAudio.onended = () => avatarRing.classList.remove('speaking');
-  }
-
-  // ── UI helpers ────────────────────────────────────────────────────────────
-  let msgIdCounter = 0;
-  function addMessage(role, content, loading = false) {
-    const id = 'msg-' + (++msgIdCounter);
-    const div = document.createElement('div');
-    div.className = `msg ${role}`;
-    div.id = id;
-    if (loading) {
-      div.innerHTML = `<div><div class="msg-label">${role === 'assistant' ? 'ভীণা' : 'আপনি'}</div><div class="msg-bubble thinking"><span></span><span></span><span></span></div></div>`;
-    } else {
-      div.innerHTML = `<div><div class="msg-label">${role === 'assistant' ? 'ভীণা' : 'আপনি'}</div><div class="msg-bubble">${content}</div></div>`;
+    // Play the reply (if any) while NOT listening, then run cb.
+    function playAndThen(data, cb) {
+      if (!data.reply_audio_b64) {
+        if (data.tts_error) addMsg("sys", "🔇 অডিও তৈরি হয়নি");
+        setTimeout(cb, 200);
+        return;
+      }
+      setState("speaking", "উত্তর শুনুন…");
+      const bytes = atob(data.reply_audio_b64), arr = new Uint8Array(bytes.length);
+      for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i);
+      const url = URL.createObjectURL(new Blob([arr], { type: data.reply_audio_mime || "audio/mpeg" }));
+      const a = new Audio(url);
+      const finish = () => { URL.revokeObjectURL(url); setTimeout(cb, 250); };
+      a.onended = finish;
+      a.onerror = finish;
+      a.play().catch(finish);
     }
-    chatMessages.appendChild(div);
-    chatMessages.scrollTop = chatMessages.scrollHeight;
-    return id;
-  }
 
-  function removeMessage(id) {
-    const el = document.getElementById(id);
-    if (el) el.remove();
-  }
-
-  function updateStage(stage) {
-    stageBadge.textContent = stageLabels[stage] || stage;
-  }
-
-  function enableControls(enabled) {
-    recordBtn.disabled = !enabled;
-    textInput.disabled = !enabled;
-    sendBtn.disabled = !enabled;
-  }
-
-  function toast(msg, error = false) {
-    const el = document.getElementById('toast');
-    el.textContent = msg;
-    el.style.borderColor = error ? 'var(--danger)' : 'var(--success)';
-    el.classList.add('show');
-    setTimeout(() => el.classList.remove('show'), 3000);
-  }
-
-  // ── Init ──────────────────────────────────────────────────────────────────
-  checkHealth();
-</script>
+    // -------------------------------------------------- reset ----
+    document.getElementById("resetBtn").addEventListener("click", () => {
+      localStorage.removeItem("s2s_session");
+      location.reload();
+    });
+  </script>
 </body>
 </html>

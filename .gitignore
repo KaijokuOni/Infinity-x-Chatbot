@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.venv/
+dist/
+build/
+
+# uv
+uv.lock
+
+# Environment & secrets
+.env
+*.key
+*.pem
+
+# Runtime artifacts (Principle VII writes here at runtime)
+logs/
+
+# Patient case database (contains medical data — never commit)
+data/
+
+# Test artifacts
+tests/fixtures/_out/
+tests/integration/_out/
+tests/manual/_out/
+.pytest_cache/
+
+# Editor / OS
+.DS_Store
+.vscode/
+.idea/
+*.swp
