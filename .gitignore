@@ -32,3 +32,4 @@ tests/manual/_out/
 .vscode/
 .idea/
 *.swp
+.claude/
