@@ -20,7 +20,8 @@ A voice-powered medical intake assistant that conducts structured patient interv
 
 | Layer | Service |
 |---|---|
-| Speech-to-text | ElevenLabs Scribe `scribe_v1` (bn) → Groq Whisper `large-v3` fallback |
+| Speech-to-text (primary) | ElevenLabs Scribe `scribe_v1` — best colloquial Bangla accuracy |
+| Speech-to-text (fallback) | Groq Whisper `large-v3` — used if Scribe fails |
 | LLM | Google Gemini 2.5 Flash → Groq Llama-3.3-70b fallback |
 | RAG | ChromaDB + `paraphrase-multilingual-MiniLM-L12-v2` (46 Bangla medical conditions) |
 | Text-to-speech | edge-tts `bn-BD-NabanitaNeural` (free, no key needed) |
@@ -36,9 +37,9 @@ A voice-powered medical intake assistant that conducts structured patient interv
 Create a `.env` file in the project root:
 
 ```dotenv
-GROQ_API_KEY=gsk_...
-GEMINI_API_KEY=AIza...
-ELEVENLABS_API_KEY=sk_...      # free account at elevenlabs.io
+GROQ_API_KEY=gsk_...            # groq.com — free tier, used for STT fallback + LLM fallback
+GEMINI_API_KEY=AIza...          # aistudio.google.com — free tier, primary LLM
+ELEVENLABS_API_KEY=sk_...       # elevenlabs.io — free account, primary STT (best Bangla accuracy)
 
 # Dashboard auth (change these)
 DASHBOARD_USER=doctor
@@ -110,7 +111,7 @@ data/
 
 ```
 Patient speaks
-    → ElevenLabs Scribe transcribes Bangla (~1s)
+    → ElevenLabs Scribe transcribes Bangla (~1s) [Groq Whisper if Scribe fails]
     → RAG retrieves relevant conditions from knowledge base
     → Gemini 2.5 Flash generates a focused follow-up question
     → edge-tts synthesizes the reply in Bangla
