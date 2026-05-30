@@ -27,8 +27,12 @@ tests/integration/_out/
 tests/manual/_out/
 .pytest_cache/
 
+# Local voice assistant (runs entirely offline — not pushed to remote)
+voice-assistant/
+
 # Editor / OS
 .DS_Store
 .vscode/
 .idea/
 *.swp
+.claude/
