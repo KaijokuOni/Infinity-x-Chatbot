@@ -52,9 +52,13 @@ def init_db() -> None:
         )
         # Migrate older DBs that predate the patient name/age columns.
         cols = {r["name"] for r in c.execute("PRAGMA table_info(cases)")}
-        for col in ("patient_name", "patient_age"):
+        for col, defn in [
+            ("patient_name", "TEXT"),
+            ("patient_age", "TEXT"),
+            ("visit_count", "INTEGER DEFAULT 1"),
+        ]:
             if col not in cols:
-                c.execute(f"ALTER TABLE cases ADD COLUMN {col} TEXT")
+                c.execute(f"ALTER TABLE cases ADD COLUMN {col} {defn}")
         c.commit()
 
 

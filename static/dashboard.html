@@ -3,135 +3,457 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Doctor Dashboard · Patient Cases</title>
+  <title>Doctor Dashboard</title>
   <style>
-    :root { color-scheme: light; }
-    * { box-sizing: border-box; }
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+Bengali:wght@400;600;700&display=swap');
+
+    :root {
+      --bg: #0a0e1a;
+      --surface: #111827;
+      --surface2: #1a2235;
+      --border: #1e2d45;
+      --border2: #243350;
+      --text: #e8edf5;
+      --text2: #8b9ab8;
+      --text3: #5b6a88;
+      --accent: #3b82f6;
+      --accent2: #1d4ed8;
+      --green: #22c55e;
+      --red: #ef4444;
+      --yellow: #f59e0b;
+      --purple: #a855f7;
+      --card-shadow: 0 4px 24px rgba(0,0,0,.4);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
     body {
-      margin: 0; min-height: 100vh;
-      font-family: "Noto Sans Bengali", "Hind Siliguri", -apple-system, system-ui, sans-serif;
-      background: #f3f5f9; color: #1b2436;
+      font-family: 'Inter', 'Noto Sans Bengali', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
     }
-    header {
+
+    /* ── Sidebar ── */
+    .sidebar {
+      position: fixed; left: 0; top: 0; bottom: 0; width: 220px;
+      background: var(--surface); border-right: 1px solid var(--border);
+      display: flex; flex-direction: column; z-index: 10;
+    }
+    .logo {
+      padding: 22px 20px 18px;
+      border-bottom: 1px solid var(--border);
+    }
+    .logo-title { font-size: 16px; font-weight: 800; color: var(--text); }
+    .logo-sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
+    .nav { padding: 16px 12px; flex: 1; }
+    .nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 12px; border-radius: 8px; font-size: 13px;
+      color: var(--text2); cursor: pointer; margin-bottom: 2px;
+      transition: all .15s;
+    }
+    .nav-item:hover { background: var(--surface2); color: var(--text); }
+    .nav-item.active { background: rgba(59,130,246,.15); color: var(--accent); }
+    .nav-icon { font-size: 16px; width: 20px; text-align: center; }
+    .sidebar-footer {
+      padding: 14px 16px; border-top: 1px solid var(--border);
+      font-size: 11px; color: var(--text3);
+    }
+    .live-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+      background: var(--green); margin-right: 6px; animation: pulse 1.8s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+    /* ── Main ── */
+    .main { margin-left: 220px; min-height: 100vh; }
+
+    .topbar {
       position: sticky; top: 0; z-index: 5;
-      background: #fff; border-bottom: 1px solid #e2e7f0;
-      padding: 16px 24px; display: flex; align-items: center; justify-content: space-between;
-      box-shadow: 0 1px 3px rgba(20,30,60,.05);
+      background: rgba(10,14,26,.85); backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 28px; display: flex; align-items: center; justify-content: space-between;
     }
-    header h1 { margin: 0; font-size: 20px; font-weight: 700; }
-    header .sub { color: #6b7794; font-size: 13px; margin-top: 2px; }
-    .right { display: flex; align-items: center; gap: 14px; font-size: 13px; color: #6b7794; }
-    .live { display: inline-flex; align-items: center; gap: 6px; }
-    .live .d { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; animation: blink 1.6s infinite; }
-    @keyframes blink { 50% { opacity: .35; } }
-    main { max-width: 1100px; margin: 0 auto; padding: 22px 16px 60px; }
-    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 16px; }
+    .topbar-left { display: flex; align-items: center; gap: 16px; }
+    .page-title { font-size: 18px; font-weight: 700; }
+    .search-wrap { position: relative; }
+    .search {
+      background: var(--surface2); border: 1px solid var(--border2);
+      border-radius: 8px; padding: 7px 12px 7px 34px;
+      font-size: 13px; color: var(--text); outline: none; width: 220px;
+      transition: border .15s;
+    }
+    .search::placeholder { color: var(--text3); }
+    .search:focus { border-color: var(--accent); }
+    .search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+      color: var(--text3); font-size: 14px; pointer-events: none; }
+    .topbar-right { display: flex; align-items: center; gap: 12px; }
+    .count-badge {
+      background: rgba(59,130,246,.15); color: var(--accent);
+      border: 1px solid rgba(59,130,246,.3);
+      border-radius: 6px; padding: 4px 10px; font-size: 12px; font-weight: 600;
+    }
+    .refresh-btn {
+      background: var(--surface2); border: 1px solid var(--border2);
+      color: var(--text2); border-radius: 8px; padding: 7px 12px;
+      font-size: 12px; cursor: pointer; transition: all .15s;
+    }
+    .refresh-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── Stats row ── */
+    .stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; padding: 22px 28px 0; }
+    .stat {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 16px 18px;
+    }
+    .stat-label { font-size: 11px; color: var(--text3); font-weight: 600; text-transform: uppercase; letter-spacing: .05em; }
+    .stat-value { font-size: 28px; font-weight: 800; margin-top: 6px; }
+    .stat-sub { font-size: 11px; color: var(--text3); margin-top: 3px; }
+    .stat.total .stat-value { color: var(--accent); }
+    .stat.severe .stat-value { color: var(--red); }
+    .stat.moderate .stat-value { color: var(--yellow); }
+    .stat.mild .stat-value { color: var(--green); }
+
+    /* ── Filter tabs ── */
+    .filters { display: flex; gap: 8px; padding: 18px 28px 0; }
+    .filter-tab {
+      padding: 6px 14px; border-radius: 999px; font-size: 12px; font-weight: 600;
+      border: 1px solid var(--border2); color: var(--text2); cursor: pointer;
+      transition: all .15s;
+    }
+    .filter-tab:hover { border-color: var(--accent); color: var(--accent); }
+    .filter-tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+    /* ── Grid ── */
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px,1fr)); gap: 16px; padding: 18px 28px 60px; }
+
+    /* ── Card ── */
     .card {
-      background: #fff; border: 1px solid #e2e7f0; border-radius: 14px; padding: 16px 18px;
-      box-shadow: 0 2px 8px rgba(20,30,60,.04); display: flex; flex-direction: column; gap: 10px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 16px; overflow: hidden;
+      box-shadow: var(--card-shadow); display: flex; flex-direction: column;
+      transition: border-color .2s, transform .2s;
     }
-    .card .top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
-    .patient { font-size: 17px; font-weight: 800; line-height: 1.3; }
-    .patient .age { font-size: 13px; font-weight: 600; color: #6b7794; }
-    .complaint { font-size: 14px; font-weight: 600; line-height: 1.4; color: #34405a; }
-    .complaint .lbl2 { color: #94a0b8; font-weight: 700; }
-    .badge { font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 999px; white-space: nowrap; text-transform: uppercase; letter-spacing: .03em; }
-    .sev-severe   { background: #fde2e2; color: #b91c1c; }
-    .sev-moderate { background: #fef0d3; color: #b45309; }
-    .sev-mild     { background: #d8f3e1; color: #15803d; }
-    .sev-unknown, .sev- { background: #e7ebf2; color: #5b6577; }
-    .row { font-size: 13px; color: #44506a; }
-    .row b { color: #1b2436; font-weight: 600; }
-    .chips { display: flex; flex-wrap: wrap; gap: 6px; }
-    .chip { font-size: 12px; padding: 4px 10px; border-radius: 999px; background: #eef2fb; color: #2b3a64; }
-    .chip.cond { background: #eae4fb; color: #5b3aa6; }
-    .summary { font-size: 13px; color: #34405a; background: #f7f9fd; border-left: 3px solid #c3cee6; padding: 8px 11px; border-radius: 6px; line-height: 1.5; }
-    .meta { font-size: 11px; color: #94a0b8; display: flex; justify-content: space-between; margin-top: 2px; }
-    details { font-size: 13px; }
-    details summary { cursor: pointer; color: #2563eb; font-size: 12px; user-select: none; }
-    .turn { margin: 8px 0; }
-    .turn .p { color: #1b2436; } .turn .a { color: #5b6577; }
-    .turn .lbl { font-size: 11px; font-weight: 700; color: #94a0b8; }
-    .empty { text-align: center; color: #8a96b4; padding: 80px 20px; font-size: 15px; }
-    .label { font-size: 11px; font-weight: 700; color: #94a0b8; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 2px; }
+    .card:hover { border-color: var(--border2); transform: translateY(-2px); }
+
+    .card-header {
+      padding: 16px 18px; display: flex; align-items: center; gap: 13px;
+      border-bottom: 1px solid var(--border);
+    }
+    .avatar {
+      width: 44px; height: 44px; border-radius: 12px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 17px; font-weight: 800;
+    }
+    .avatar-blue  { background: rgba(59,130,246,.15); color: var(--accent); }
+    .avatar-green { background: rgba(34,197,94,.15); color: var(--green); }
+    .avatar-red   { background: rgba(239,68,68,.15); color: var(--red); }
+    .avatar-purple{ background: rgba(168,85,247,.15); color: var(--purple); }
+    .avatar-yellow{ background: rgba(245,158,11,.15); color: var(--yellow); }
+
+    .patient-info { flex: 1; min-width: 0; }
+    .patient-name { font-size: 16px; font-weight: 700; }
+    .patient-meta { font-size: 12px; color: var(--text3); margin-top: 2px; }
+
+    .sev-badge {
+      font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 6px;
+      text-transform: uppercase; letter-spacing: .05em; flex-shrink: 0;
+    }
+    .sev-severe   { background: rgba(239,68,68,.15); color: #f87171; border: 1px solid rgba(239,68,68,.3); }
+    .sev-moderate { background: rgba(245,158,11,.15); color: #fbbf24; border: 1px solid rgba(245,158,11,.3); }
+    .sev-mild     { background: rgba(34,197,94,.15); color: #4ade80; border: 1px solid rgba(34,197,94,.3); }
+    .sev-unknown  { background: rgba(100,116,139,.15); color: #94a3b8; border: 1px solid rgba(100,116,139,.3); }
+
+    .card-body { padding: 14px 18px; display: flex; flex-direction: column; gap: 12px; flex: 1; }
+
+    .section-label {
+      font-size: 10px; font-weight: 700; color: var(--text3);
+      text-transform: uppercase; letter-spacing: .06em; margin-bottom: 5px;
+    }
+
+    .complaint-text {
+      font-size: 14px; font-weight: 600; color: var(--text);
+      background: var(--surface2); border-radius: 8px; padding: 8px 12px;
+      border-left: 3px solid var(--accent);
+    }
+
+    .chips { display: flex; flex-wrap: wrap; gap: 5px; }
+    .chip {
+      font-size: 11px; padding: 3px 9px; border-radius: 999px;
+      background: var(--surface2); color: var(--text2);
+      border: 1px solid var(--border2);
+    }
+    .chip.cond { background: rgba(168,85,247,.1); color: #c084fc; border-color: rgba(168,85,247,.25); }
+    .chip.test { background: rgba(34,197,94,.08); color: #86efac; border-color: rgba(34,197,94,.2); }
+
+    .info-row { display: flex; gap: 6px; font-size: 12px; color: var(--text2); }
+    .info-row b { color: var(--text); font-weight: 600; }
+
+    .summary-box {
+      font-size: 12px; color: var(--text2); line-height: 1.6;
+      background: var(--surface2); border-radius: 8px; padding: 10px 12px;
+      border: 1px solid var(--border);
+    }
+
+    .card-footer {
+      padding: 10px 18px; border-top: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .session-id { font-size: 10px; color: var(--text3); font-family: monospace; }
+    .time-meta { font-size: 11px; color: var(--text3); }
+
+    /* ── Transcript ── */
+    details { border-top: 1px solid var(--border); }
+    details summary {
+      padding: 9px 18px; cursor: pointer; font-size: 12px;
+      color: var(--accent); user-select: none; list-style: none;
+      display: flex; align-items: center; gap: 6px;
+    }
+    details summary::before { content: '▶'; font-size: 9px; transition: transform .2s; }
+    details[open] summary::before { transform: rotate(90deg); }
+    .transcript { padding: 12px 18px; display: flex; flex-direction: column; gap: 10px; }
+    .turn-user { align-self: flex-end; max-width: 80%; }
+    .turn-bot  { align-self: flex-start; max-width: 85%; }
+    .bubble {
+      padding: 8px 12px; border-radius: 12px; font-size: 12px; line-height: 1.55;
+    }
+    .bubble-user { background: rgba(59,130,246,.15); color: #93c5fd; border-bottom-right-radius: 3px; }
+    .bubble-bot  { background: var(--surface2); color: var(--text2); border-bottom-left-radius: 3px; }
+    .turn-label { font-size: 10px; font-weight: 700; color: var(--text3); margin-bottom: 3px; }
+
+    /* ── Empty ── */
+    .empty {
+      grid-column: 1/-1; text-align: center; padding: 80px 20px;
+      color: var(--text3); font-size: 15px;
+    }
+    .empty-icon { font-size: 48px; margin-bottom: 16px; }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
   </style>
 </head>
 <body>
-  <header>
-    <div>
-      <h1>🩺 Doctor Dashboard</h1>
-      <div class="sub">Patient intake cases · collected by the Bangla voice assistant</div>
+
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-title">🩺 MediAssist</div>
+      <div class="logo-sub">Doctor Dashboard</div>
     </div>
-    <div class="right">
-      <span id="count">0 cases</span>
-      <span class="live"><span class="d"></span> live</span>
+    <nav class="nav">
+      <div class="nav-item active"><span class="nav-icon">📋</span> Patient Cases</div>
+      <div class="nav-item"><span class="nav-icon">📊</span> Analytics</div>
+      <div class="nav-item"><span class="nav-icon">🔔</span> Alerts</div>
+      <div class="nav-item"><span class="nav-icon">⚙️</span> Settings</div>
+    </nav>
+    <div class="sidebar-footer">
+      <span class="live-dot"></span> Voice assistant live
+      <div style="margin-top:6px">Auto-refreshes every 5s</div>
     </div>
-  </header>
-  <main>
-    <div id="grid" class="grid"></div>
-    <div id="empty" class="empty" style="display:none">No patient cases yet. They appear here as patients talk to the voice assistant.</div>
-  </main>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-left">
+        <div class="page-title">Patient Cases</div>
+        <div class="search-wrap">
+          <span class="search-icon">🔍</span>
+          <input class="search" id="search" type="text" placeholder="Search patients…" oninput="render()" />
+        </div>
+      </div>
+      <div class="topbar-right">
+        <span class="count-badge" id="countBadge">0 patients</span>
+        <button class="refresh-btn" onclick="load()">↻ Refresh</button>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat total">
+        <div class="stat-label">Total Patients</div>
+        <div class="stat-value" id="statTotal">0</div>
+        <div class="stat-sub">all time</div>
+      </div>
+      <div class="stat severe">
+        <div class="stat-label">Severe</div>
+        <div class="stat-value" id="statSevere">0</div>
+        <div class="stat-sub">needs urgent attention</div>
+      </div>
+      <div class="stat moderate">
+        <div class="stat-label">Moderate</div>
+        <div class="stat-value" id="statModerate">0</div>
+        <div class="stat-sub">monitor closely</div>
+      </div>
+      <div class="stat mild">
+        <div class="stat-label">Mild</div>
+        <div class="stat-value" id="statMild">0</div>
+        <div class="stat-sub">routine care</div>
+      </div>
+    </div>
+
+    <div class="filters">
+      <div class="filter-tab active" onclick="setFilter('all', this)">All</div>
+      <div class="filter-tab" onclick="setFilter('severe', this)">🔴 Severe</div>
+      <div class="filter-tab" onclick="setFilter('moderate', this)">🟡 Moderate</div>
+      <div class="filter-tab" onclick="setFilter('mild', this)">🟢 Mild</div>
+      <div class="filter-tab" onclick="setFilter('unknown', this)">⚪ Unknown</div>
+    </div>
+
+    <div class="grid" id="grid"></div>
+  </div>
 
   <script>
-    const grid = document.getElementById("grid");
-    const empty = document.getElementById("empty");
-    const countEl = document.getElementById("count");
+    let allCases = [];
+    let activeFilter = 'all';
 
-    function esc(s) { const d = document.createElement("div"); d.textContent = s == null ? "" : s; return d.innerHTML; }
-    function ago(ts) {
-      const s = Math.max(0, Math.floor(Date.now() / 1000 - ts));
-      if (s < 60) return s + "s ago";
-      if (s < 3600) return Math.floor(s / 60) + "m ago";
-      if (s < 86400) return Math.floor(s / 3600) + "h ago";
-      return new Date(ts * 1000).toLocaleDateString();
+    const avatarColors = ['avatar-blue','avatar-green','avatar-red','avatar-purple','avatar-yellow'];
+    function avatarColor(name) {
+      let h = 0;
+      for (let c of (name||'?')) h = c.charCodeAt(0) + ((h<<5)-h);
+      return avatarColors[Math.abs(h) % avatarColors.length];
     }
-    function sevClass(s) { return "sev-" + (s || "unknown").toLowerCase(); }
+    function initials(name) {
+      if (!name) return '?';
+      const w = name.trim().split(/\s+/);
+      return (w[0][0] + (w[1] ? w[1][0] : '')).toUpperCase();
+    }
+
+    function esc(s) {
+      const d = document.createElement('div');
+      d.textContent = s == null ? '' : String(s);
+      return d.innerHTML;
+    }
+
+    function ago(ts) {
+      const s = Math.max(0, Math.floor(Date.now()/1000 - ts));
+      if (s < 60) return s + 's ago';
+      if (s < 3600) return Math.floor(s/60) + 'm ago';
+      if (s < 86400) return Math.floor(s/3600) + 'h ago';
+      return new Date(ts*1000).toLocaleDateString('en-GB', {day:'numeric',month:'short',year:'numeric'});
+    }
+
+    function sevClass(s) { return 'sev-' + (s||'unknown').toLowerCase(); }
 
     function chips(arr, cls) {
-      if (!arr || !arr.length) return '<span class="row" style="color:#aab3c6">—</span>';
-      return '<div class="chips">' + arr.map(x => `<span class="chip ${cls || ""}">${esc(x)}</span>`).join("") + "</div>";
+      if (!arr || !arr.length) return '<span style="color:var(--text3);font-size:12px">—</span>';
+      return '<div class="chips">' + arr.map(x => `<span class="chip ${cls||''}">${esc(x)}</span>`).join('') + '</div>';
     }
 
     function transcriptHtml(t) {
-      if (!t || !t.length) return "";
-      const rows = t.map(turn =>
-        `<div class="turn"><div><span class="lbl">রোগী</span> <span class="p">${esc(turn.user)}</span></div>` +
-        `<div><span class="lbl">সহকারী</span> <span class="a">${esc(turn.assistant)}</span></div></div>`
-      ).join("");
-      return `<details><summary>View full conversation (${t.length})</summary><div style="margin-top:8px">${rows}</div></details>`;
+      if (!t || !t.length) return '';
+      const bubbles = t.map(turn => `
+        <div class="turn-user"><div class="turn-label">রোগী</div><div class="bubble bubble-user">${esc(turn.user)}</div></div>
+        <div class="turn-bot"><div class="turn-label">সহকারী</div><div class="bubble bubble-bot">${esc(turn.assistant)}</div></div>
+      `).join('');
+      return `<details>
+        <summary>Conversation transcript (${t.length} turns)</summary>
+        <div class="transcript">${bubbles}</div>
+      </details>`;
     }
 
     function card(c) {
-      const name = esc(c.patient_name) || '<span style="color:#aab3c6">Unknown patient</span>';
-      const age = c.patient_age ? `<span class="age"> · ${esc(c.patient_age)} yrs</span>` : "";
-      const complaint = c.chief_complaint
-        ? `<div class="complaint"><span class="lbl2">Complaint:</span> ${esc(c.chief_complaint)}</div>`
-        : "";
-      return `<div class="card">
-        <div class="top">
-          <div class="patient">${name}${age}</div>
-          <span class="badge ${sevClass(c.severity)}">${esc(c.severity || "unknown")}</span>
+      const name = c.patient_name || 'Unknown Patient';
+      const sev = (c.severity || 'unknown').toLowerCase();
+      return `<div class="card" data-sev="${sev}" data-name="${esc(name).toLowerCase()}">
+        <div class="card-header">
+          <div class="avatar ${avatarColor(c.patient_name)}">${esc(initials(c.patient_name))}</div>
+          <div class="patient-info">
+            <div class="patient-name">${esc(name)}</div>
+            <div class="patient-meta">
+              ${c.patient_age ? esc(c.patient_age) + ' years · ' : ''}
+              ${c.turns} turns · ${ago(c.updated_at)}
+            </div>
+          </div>
+          <span class="sev-badge ${sevClass(c.severity)}">${esc(c.severity||'unknown')}</span>
         </div>
-        ${complaint}
-        <div><div class="label">Symptoms</div>${chips(c.symptoms)}</div>
-        <div class="row"><b>Duration:</b> ${esc(c.duration) || "—"}</div>
-        <div><div class="label">Tests done</div>${chips(c.tests_done)}</div>
-        <div><div class="label">Possible conditions</div>${chips(c.possible_conditions, "cond")}</div>
-        ${c.summary ? `<div class="summary">${esc(c.summary)}</div>` : ""}
+
+        <div class="card-body">
+          ${c.chief_complaint ? `
+            <div>
+              <div class="section-label">Chief Complaint</div>
+              <div class="complaint-text">${esc(c.chief_complaint)}</div>
+            </div>` : ''}
+
+          ${c.symptoms && c.symptoms.length ? `
+            <div>
+              <div class="section-label">Symptoms</div>
+              ${chips(c.symptoms)}
+            </div>` : ''}
+
+          ${c.duration ? `
+            <div class="info-row">⏱ <b>Duration:</b> ${esc(c.duration)}
+            </div>` : ''}
+
+          ${c.tests_done && c.tests_done.length ? `
+            <div>
+              <div class="section-label">Tests Done</div>
+              ${chips(c.tests_done, 'test')}
+            </div>` : ''}
+
+          ${c.possible_conditions && c.possible_conditions.length ? `
+            <div>
+              <div class="section-label">Possible Conditions</div>
+              ${chips(c.possible_conditions, 'cond')}
+            </div>` : ''}
+
+          ${c.summary ? `
+            <div>
+              <div class="section-label">Doctor's Summary</div>
+              <div class="summary-box">${esc(c.summary)}</div>
+            </div>` : ''}
+        </div>
+
         ${transcriptHtml(c.transcript)}
-        <div class="meta"><span>${esc(c.session_id)}</span><span>${c.turns} turns · ${ago(c.updated_at)}</span></div>
+
+        <div class="card-footer">
+          <span class="session-id">${esc(c.session_id.slice(0,16))}…</span>
+          <span class="time-meta">Updated ${ago(c.updated_at)}</span>
+        </div>
       </div>`;
+    }
+
+    function setFilter(f, el) {
+      activeFilter = f;
+      document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+      el.classList.add('active');
+      render();
+    }
+
+    function render() {
+      const query = (document.getElementById('search').value || '').toLowerCase();
+      let cases = allCases;
+
+      if (activeFilter !== 'all')
+        cases = cases.filter(c => (c.severity||'unknown').toLowerCase() === activeFilter);
+
+      if (query)
+        cases = cases.filter(c =>
+          (c.patient_name||'').toLowerCase().includes(query) ||
+          (c.chief_complaint||'').toLowerCase().includes(query) ||
+          (c.summary||'').toLowerCase().includes(query)
+        );
+
+      const grid = document.getElementById('grid');
+      if (!cases.length) {
+        grid.innerHTML = `<div class="empty"><div class="empty-icon">🔍</div>No cases found.</div>`;
+        return;
+      }
+      grid.innerHTML = cases.map(card).join('');
     }
 
     async function load() {
       try {
-        const res = await fetch("/api/cases", { headers: { "ngrok-skip-browser-warning": "1" } });
-        const cases = await res.json();
-        countEl.textContent = cases.length + (cases.length === 1 ? " case" : " cases");
-        if (!cases.length) { grid.innerHTML = ""; empty.style.display = "block"; return; }
-        empty.style.display = "none";
-        grid.innerHTML = cases.map(card).join("");
-      } catch (_) { /* keep last render on transient error */ }
+        const res = await fetch('/api/cases', { headers: { 'ngrok-skip-browser-warning': '1' } });
+        allCases = await res.json();
+
+        // Update stats
+        document.getElementById('statTotal').textContent = allCases.length;
+        document.getElementById('statSevere').textContent = allCases.filter(c => (c.severity||'').toLowerCase()==='severe').length;
+        document.getElementById('statModerate').textContent = allCases.filter(c => (c.severity||'').toLowerCase()==='moderate').length;
+        document.getElementById('statMild').textContent = allCases.filter(c => (c.severity||'').toLowerCase()==='mild').length;
+        document.getElementById('countBadge').textContent = allCases.length + ' patient' + (allCases.length===1?'':'s');
+
+        render();
+      } catch (_) {}
     }
 
     load();

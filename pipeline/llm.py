@@ -23,24 +23,16 @@ GEMINI_RETRIES = 3
 BACKOFF_SECONDS = (0.6, 1.5, 3.0)
 
 SYSTEM_PROMPT = (
-    "তুমি একটি মেডিকেল প্রকল্পের বাংলা ভয়েস সহকারী। তোমার একমাত্র কাজ রোগীর "
-    "তথ্য, সমস্যা ও উপসর্গ সংগ্রহ করা — চিকিৎসা বা পরামর্শ দেওয়া নয়।\n\n"
-    "কথোপকথনের শুরুতে তুমি রোগীকে তার নাম ও বয়স জিজ্ঞাসা করেছ। রোগীর প্রথম "
-    "উত্তর থেকে নাম ও বয়স বুঝে নাও; এগুলো স্পষ্ট না হলে আরেকবার বিনয়ের সাথে "
-    "জিজ্ঞাসা করো। নাম ও বয়স পেলে সংক্ষেপে স্বীকার করে তারপর রোগীর মূল সমস্যা "
-    "জিজ্ঞাসা করো।\n\n"
-    "এরপর ধাপে ধাপে জিজ্ঞাসা করবে: কী কী উপসর্গ আছে, কতদিন ধরে এবং কতটা তীব্র; "
-    "এবং সে আগে কোনো পরীক্ষা (টেস্ট) করিয়েছে কিনা, করালে ফলাফল কী। একবারে একটি "
-    "বা দুটির বেশি প্রশ্ন করবে না, যেন কথোপকথন স্বাভাবিক থাকে।\n\n"
-    "তোমার চিকিৎসা জ্ঞান ব্যবহার করে উপসর্গগুলো বুঝবে, কিন্তু কখনোই রোগীকে "
-    "কোনো ওষুধ, ডোজ, চিকিৎসা বা পরামর্শ দেবে না। কেউ চিকিৎসা বা সমাধান চাইলে "
-    "বিনয়ের সাথে বলবে যে একজন ডাক্তার তথ্য দেখে সিদ্ধান্ত নেবেন।\n\n"
-    "পর্যাপ্ত তথ্য পেলে সংক্ষেপে উপসর্গগুলো এবং সম্ভাব্য রোগগুলো রোগীকে জানাবে, "
-    "এবং বলবে যে এই তথ্য ডাক্তারের ড্যাশবোর্ডে পাঠানো হচ্ছে।\n\n"
-    "উত্তর সবসময় বাংলায়, সংক্ষিপ্ত, সহানুভূতিশীল ও কথ্য ভঙ্গিতে দেবে। তালিকা, "
-    "বুলেট বা মার্কডাউন ব্যবহার করবে না; সরল বাক্যে কথা বলবে।\n\n"
-    "রোগীকে কখনোই 'ভাই', 'আপা', 'দাদা' বা এই ধরনের সম্বোধন করবে না, এবং বারবার "
-    "তার নাম ধরেও ডাকবে না। সরাসরি স্বাভাবিকভাবে কথা বলবে।"
+    "তুমি একজন বাংলা মেডিকেল ভয়েস সহকারী। কাজ: রোগীর উপসর্গ সংগ্রহ করা। "
+    "চিকিৎসা বা পরামর্শ দেবে না।\n\n"
+    "নিয়ম:\n"
+    "১. প্রতি উত্তরে শুধু একটি প্রশ্ন করবে।\n"
+    "২. উত্তর সর্বোচ্চ ৩ বাক্যের মধ্যে রাখবে।\n"
+    "৩. নাম ও বয়স পেলে শুধু স্বীকার করে সরাসরি সমস্যা জিজ্ঞাসা করো।\n"
+    "৪. উপসর্গ শুনলে: কতদিন ধরে এবং তীব্রতা জিজ্ঞাসা করো।\n"
+    "৫. কোনো তালিকা, বুলেট বা দীর্ঘ ব্যাখ্যা নয়।\n"
+    "৬. সহানুভূতিশীল কিন্তু সংক্ষিপ্ত থাকো।\n"
+    "৭. নাম ধরে ডাকবে না, 'ভাই/আপা/দাদা' বলবে না।"
 )
 
 _TRANSIENT_MARKERS = (
@@ -102,9 +94,19 @@ def _gemini_contents(history: list[dict], user_text: str) -> list[types.Content]
     return contents
 
 
-def _gemini_reply(user_text: str, history: list[dict], directive: str | None = None) -> str:
+def _build_system(rag_context: str = "", directive: str | None = None) -> str:
+    parts = [SYSTEM_PROMPT]
+    if rag_context:
+        parts.append(rag_context)
+    if directive:
+        parts.append(directive)
+    return "\n\n".join(parts)
+
+
+def _gemini_reply(user_text: str, history: list[dict], directive: str | None = None,
+                  rag_context: str = "") -> str:
     client = _gemini_client()
-    system = SYSTEM_PROMPT if not directive else SYSTEM_PROMPT + "\n\n" + directive
+    system = _build_system(rag_context, directive)
     config = types.GenerateContentConfig(
         system_instruction=system,
         max_output_tokens=MAX_OUTPUT_TOKENS,
@@ -145,9 +147,10 @@ def _groq_client():
     return _groq
 
 
-def _groq_reply(user_text: str, history: list[dict], directive: str | None = None) -> str:
+def _groq_reply(user_text: str, history: list[dict], directive: str | None = None,
+                rag_context: str = "") -> str:
     client = _groq_client()
-    system = SYSTEM_PROMPT if not directive else SYSTEM_PROMPT + "\n\n" + directive
+    system = _build_system(rag_context, directive)
     messages = [{"role": "system", "content": system}]
     for turn in history:
         messages.append({"role": "user", "content": turn["user"]})
@@ -177,21 +180,30 @@ def reply(
     history = history or []
     start = time.monotonic()
 
+    # RAG: inject medical context after name/age turn (turn 2+)
+    rag_context = ""
+    if history:
+        try:
+            from rag.store import build_context_block
+            rag_context = build_context_block(user_text, history)
+        except Exception as exc:
+            pass  # RAG is optional — never block a reply
+
     # Skip Gemini entirely while it's in quota cooldown — avoids a wasted call
     # (and its network round-trip) on every turn once the daily tier is spent.
     skip_gemini = time.monotonic() < _gemini_cooldown_until
 
     model_used = GROQ_MODEL_ID if skip_gemini else GEMINI_MODEL_ID
     if skip_gemini:
-        text = _groq_reply(user_text, history, directive)
+        text = _groq_reply(user_text, history, directive, rag_context)
     else:
         try:
-            text = _gemini_reply(user_text, history, directive)
+            text = _gemini_reply(user_text, history, directive, rag_context)
         except Exception as gemini_exc:  # noqa: BLE001 — try the fallback
             if _is_quota(gemini_exc):
                 _gemini_cooldown_until = time.monotonic() + GEMINI_COOLDOWN_SECONDS
             try:
-                text = _groq_reply(user_text, history, directive)
+                text = _groq_reply(user_text, history, directive, rag_context)
                 model_used = GROQ_MODEL_ID
             except Exception as groq_exc:  # noqa: BLE001
                 raise LlmError(
@@ -203,9 +215,9 @@ def reply(
         nudge = user_text + "\n\n(অনুগ্রহ করে শুধু বাংলায় উত্তর দাও।)"
         try:
             text = (
-                _groq_reply(nudge, history, directive)
+                _groq_reply(nudge, history, directive, rag_context)
                 if model_used == GROQ_MODEL_ID
-                else _gemini_reply(nudge, history, directive)
+                else _gemini_reply(nudge, history, directive, rag_context)
             )
         except Exception:  # noqa: BLE001 — keep the original text
             pass
